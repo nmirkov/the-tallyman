@@ -2,7 +2,7 @@
 id: TT-015
 title: Write the complete story bible and reference walkthrough (docs/STORY.md)
 milestone: M3
-status: todo
+status: in-progress
 agent: writer
 model: opus
 depends: [TT-002]
@@ -26,7 +26,7 @@ The single source of truth for all content tickets (TT-016…TT-018, art TT-019�
 11. **Sound cue list** (sfx ids used) and **picture list** (ids + briefs) for audio/art tickets.
 
 ## Acceptance criteria
-- [ ] Consistent with PLAN §2 and ARCHITECTURE.md field names (use the schema's terms).
+- [ ] Consistent with PLAN §2 and **ARCHITECTURE.md is normative for names**: content uses the Cond/Reaction language (A4.4/A4.5: `say`, `setFlag`, `if`, …), finale state as content `vars` (C1, A14.3 encodings), item fields per A4.7. Where you describe data, write it in that vocabulary so TT-016…018 can transcribe it.
 - [ ] Handcuffs are discoverable before the finale with an in-world pointer (Codex plan review R3 note 7); every clue has a pointer (PLAN §2.2 clue fairness).
 - [ ] No softlocks: a short "Softlock audit" section walks through each critical item and consumable.
 - [ ] Description texts use only ASCII + `£` (normaliser handles curly quotes, but write straight ones).

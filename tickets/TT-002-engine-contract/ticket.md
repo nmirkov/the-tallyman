@@ -2,7 +2,7 @@
 id: TT-002
 title: Define the engine contract (ARCHITECTURE.md + types.js)
 milestone: M0
-status: todo
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-001]

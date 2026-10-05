@@ -2,7 +2,7 @@
 id: TT-006
 title: State, RNG, world queries, save validation and content linter core
 milestone: M1
-status: todo
+status: in-progress
 agent: engine-dev
 model: opus
 depends: [TT-002]

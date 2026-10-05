@@ -20,7 +20,7 @@ A playable engine on the mini world: `createGame()` per ARCHITECTURE.md with the
 - Tests: `tests/unit/actions-*.test.js` per family + `tests/unit/game.test.js` (chains, barriers incl. `LOAD 1 THEN NORTH`, UNDO incl. mid-chain, RESTART, refresh bundles incl. pending prompt and ended game, never throws).
 
 ## File allow-list
-`src/engine/game.js`, `src/engine/text.js`, `src/engine/actions/*`, `tools/play.js`, `tests/unit/actions-*.test.js`, `tests/unit/game.test.js`, `tests/fixtures/*` (additive)
+`src/engine/game.js`, `src/engine/api.js` (HookApi + Reaction runner, C27), `src/engine/text.js`, `src/engine/actions/*`, `tools/play.js`, `tests/unit/actions-*.test.js`, `tests/unit/game.test.js`, `tests/fixtures/*` (additive)
 
 ## Acceptance criteria
 - [ ] `npm run play -- --content tests/fixtures/mini-world.js --script <file>` produces a sensible transcript (include one in implementation.md).

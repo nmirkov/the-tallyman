@@ -2,7 +2,7 @@
 id: TT-005
 title: Parser syntax layer — tokenise, normalise, match grammar
 milestone: M1
-status: todo
+status: in-progress
 agent: engine-dev
 model: opus
 depends: [TT-002]
@@ -14,7 +14,7 @@ Turn a raw input line into a list of *unresolved* commands (verb + noun phrases 
 
 ## Scope
 - `src/engine/vocab.js`: verbs with synonyms (classic set + story verbs: BUY, DRINK, CALL/PHONE/DIAL, ACCUSE, ARREST/CUFF/HANDCUFF, SHOW, GIVE, ASK/TELL…ABOUT, TALK TO, CUT, TEAR/RIP, OPEN/CLOSE, UNLOCK/LOCK, LIGHT/TURN ON/SWITCH ON/OFF, PUSH/PULL/MOVE/SLIDE, CLIMB, ENTER, SEARCH, LISTEN, SMELL, READ, WEAR, OIL, FREE, HINT, NOTES/NOTEBOOK/CLUES, TIME, SCORE, SAVE/LOAD/RESTORE, EXPORT/IMPORT, UNDO, RESTART, QUIT, HELP, VERBOSE/BRIEF, SOUND/MUSIC/THEME/GRAPHICS/TYPEWRITER, AGAIN/G, WAIT/Z, INVENTORY/I, LOOK/L, EXAMINE/X), abbreviations (N S E W NE NW SE SW U D), directions, prepositions (IN, INTO, ON, ONTO, WITH, USING, FROM, TO, AT, ABOUT, UNDER, BEHIND), articles/fillers (THE, A, AN, SOME, PLEASE), pronouns (IT, THEM, HIM, HER), ALL/EVERYTHING/EXCEPT/BUT.
-- `src/engine/parser.js`: `tokenise(line)`, `splitChain(tokens)` (`.`, `,` before verbs, THEN, AND THEN), `parseCommand(tokens, vocab)` → `{verb, dobj?, prep?, iobj?, raw}` noun phrases as `{words, adjectives?, all?, except?, pronoun?}`; grammar patterns per verb (e.g. `put X in|on Y`, `take X from Y`, `unlock X with Y`, `ask X about TOPIC` where TOPIC is free text, `cut X with Y`, `turn on X` / `turn X on`, `go DIR` / bare DIR, `look at X`, `pick up X`/`pick X up`). Unknown word → `{error:'unknown-word', word}`; known words but no pattern → `{error:'no-pattern', verb}`. Case-insensitive; strips punctuation except chain separators.
+- `src/engine/parser.js`: `tokenise(line)`, `splitChain(tokens)` (`.`, `,` before verbs, THEN, AND THEN), `parseCommand(tokens, vocab)` → `{verb, dobj?, prep?, iobj?, raw}` noun phrases exactly as ARCHITECTURE.md A6.2 (C34: all phrase words kept in `words`, no adjective/noun split); grammar patterns per verb (e.g. `put X in|on Y`, `take X from Y`, `unlock X with Y`, `ask X about TOPIC` where TOPIC is free text, `cut X with Y`, `turn on X` / `turn X on`, `go DIR` / bare DIR, `look at X`, `pick up X`/`pick X up`). Unknown word → `{error:'unknown-word', word}`; known words but no pattern → `{error:'no-pattern', verb}`. Case-insensitive; strips punctuation except chain separators.
 - Multiword nouns are *not* resolved here — noun phrases keep all words; TT-007 binds them.
 - Extensive tests `tests/unit/parser.test.js` (≥ 80 cases incl. every abbreviation, every pattern, chains, unknown words, pronouns, ALL EXCEPT, empty input, garbage, very long input).
 
