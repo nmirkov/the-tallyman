@@ -2,7 +2,7 @@
 id: TT-004
 title: Generate docs/progress.html from plan, tickets and git history
 milestone: M0
-status: todo
+status: done
 agent: engine-dev
 model: sonnet
 depends: [TT-001]
