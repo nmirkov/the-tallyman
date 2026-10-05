@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen Test</title>
+<!--
+  TT-003 dev page (serve with `npm start`, open /tools/screen-test.html).
+  Query params:
+    theme = c64 (default) | spectrum | amber | both   (both = c64 + spectrum side by side)
+    view  = layout (default: status bar + picture + text per PLAN §3.6) | glyphs (font + palette sheet)
+    static=1  disable the cursor blink (for deterministic screenshots)
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  #wrap { display: flex; width: 100%; height: 100%; }
+  .slot { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
+  .slot canvas { position: absolute; inset: 0; display: block; image-rendering: pixelated; }
+  @media (orientation: portrait) { #wrap { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="module">
+import { createScreen } from '../src/ui/screen.js';
+import { CURSOR } from '../src/ui/font8x8.js';
+
+const params = new URLSearchParams(location.search);
+const themeParam = params.get('theme') || 'c64';
+const view = params.get('view') || 'layout';
+const blink = params.get('static') !== '1';
+const themes = themeParam === 'both' ? ['c64', 'spectrum'] : [themeParam];
+const COLS = 40;
+
+function statusBar(s, left, right) {
+  const pad = COLS - 2 - left.length - right.length;
+  s.print(0, 0, ` ${left}${' '.repeat(Math.max(1, pad))}${right} `, 'statusFg', 'statusBg');
+}
+
+// Deterministic PETSCII-style scene for the 40x9 picture panel (rows 1-9).
+function drawPicture(s, top) {
+  const P = (x, y, ch, fg, bg = '0') => s.put(x, top + y, ch, fg, bg);
+  s.fill({ x: 0, y: top, w: COLS, h: 9 }, ' ', '1', '0');
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (let i = 0; i < 14; i++) P(Math.floor(rnd() * 40), Math.floor(rnd() * 3), rnd() < 0.3 ? '*' : '.', rnd() < 0.5 ? 'f' : 'c');
+  // moon
+  s.print(31, top + 1, '▗██▖', '7', '0');
+  s.print(31, top + 2, '▝██▘', '7', '0');
+  // distant hills
+  const hill = '▁▂▃▄▅▆▆▅▄▄▅▆▇▇▆▅▄▃';
+  for (let i = 0; i < hill.length; i++) P(22 + i, 6, hill[i], '6');
+  s.fill({ x: 22, y: top + 7, w: 18, h: 1 }, '█', '6', '0');
+  // mill: roof, walls, lit windows, door
+  s.fill({ x: 5, y: top + 2, w: 12, h: 1 }, '▄', 'b', '0');
+  s.fill({ x: 4, y: top + 3, w: 14, h: 5 }, '█', 'b', '0');
+  for (const x of [6, 9, 12, 15]) { P(x, 4, '▄', '7', 'b'); P(x, 6, '▀', x === 12 ? 'a' : '7', 'b'); }
+  P(10, 7, '▐', '9', 'b'); P(11, 7, '▌', '9', 'b');
+  // chimney
+  s.fill({ x: 19, y: top, w: 2, h: 8 }, '█', 'c', '0');
+  P(19, 0, '▒', 'f'); P(20, 0, '░', 'f');
+  // lamp post
+  P(26, 3, '▀', '7'); for (let y = 4; y < 8; y++) P(26, y, '│', 'c');
+  // cobbles
+  s.fill({ x: 0, y: top + 8, w: COLS, h: 1 }, '▓', '9', '0');
+  // rain
+  for (let i = 0; i < 40; i++) {
+    const x = Math.floor(rnd() * 40), y = Math.floor(rnd() * 8);
+    if (s.get(x, top + y).ch === ' ') P(x, y, '╱', 'e');
+  }
+}
+
+function drawLayout(s) {
+  s.clearRegion();
+  statusBar(s, 'MILL YARD', '23:14  SC 45');
+  drawPicture(s, 1);
+  s.fill({ x: 0, y: 10, w: COLS, h: 1 }, '─', 'divider');
+  const lines = [
+    ['Mill Yard', 'title'],
+    ['Rain needles the cobbles. The old mill', null],
+    ['looms to the west, its windows lit by a', null],
+    ['light that should not be there. A tally', null],
+    ['stick lies by the gate, worth £2 to', null],
+    ['someone.', null],
+    ['', null],
+    ['> TAKE STICK', 'echo'],
+    ['Taken. Forty notches. One is fresh.', null],
+    ['...nineteen... twenty...', 'whisper'],
+    ['Your nerve is failing!', 'alert'],
+    ['[MORE]', 'system'],
+  ];
+  lines.forEach(([t, role], i) => s.print(0, 11 + i, t, role));
+  s.print(0, 24, '>', 'fg');
+  s.put(1, 24, CURSOR, 'cursor');
+}
+
+function drawGlyphs(s) {
+  s.clearRegion();
+  statusBar(s, 'FONT8X8 + PALETTE', s.theme.name.toUpperCase());
+  const row = (y, label, from, n) => {
+    s.print(0, y, label, 'dim');
+    for (let i = 0; i < n; i++) s.put(5 + i, y, String.fromCodePoint(from + i));
+  };
+  s.print(0, 2, 'ASCII U+0020-007E', 'title');
+  for (let r = 0; r < 3; r++) row(3 + r, (0x20 + r * 32).toString(16).padStart(4, '0'), 0x20 + r * 32, r === 2 ? 31 : 32);
+  s.print(0, 7, 'BOX U+2500-257F', 'title');
+  for (let r = 0; r < 4; r++) row(8 + r, (0x2500 + r * 32).toString(16), 0x2500 + r * 32, 32);
+  s.print(0, 13, 'BLOCKS U+2580-259F', 'title');
+  row(14, '2580', 0x2580, 32);
+  s.print(0, 16, 'EXTRA', 'title');
+  s.print(6, 16, '£ U+00A3   cursor U+E000', 'fg');
+  s.put(31, 16, CURSOR, 'cursor');
+  s.print(0, 18, 'PALETTE 0-F', 'title');
+  // swatches framed black above / white below so every key (incl. the bg colour) shows
+  for (let k = 0; k < 16; k++) {
+    const key = k.toString(16);
+    s.print(5 + k * 2, 19, '\u2584\u2584', key, '0');
+    s.print(5 + k * 2, 20, '\u2580\u2580', key, '1');
+    s.put(5 + k * 2, 21, key.toUpperCase(), 'dim');
+  }
+  s.print(0, 22, 'INK', 'dim');
+  for (let k = 0; k < 16; k++) s.print(5 + k * 2, 22, 'Ab', k.toString(16));
+  s.print(0, 23, 'Reverse video', 'fg');
+  for (let x = 0; x < 13; x++) s.invert(x, 23);
+  s.print(0, 24, 'unknown: é…“ -> ?', 'fg');
+}
+
+const wrap = document.getElementById('wrap');
+const screens = themes.map((theme) => {
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-label', `${theme} character screen`);
+  slot.append(canvas);
+  wrap.append(slot);
+  const s = createScreen(canvas, { theme });
+  (view === 'glyphs' ? drawGlyphs : drawLayout)(s);
+  s.render();
+  return s;
+});
+window.__screens = screens;
+
+if (blink && view === 'layout') {
+  let on = true;
+  setInterval(() => {
+    on = !on;
+    for (const s of screens) s.put(1, 24, on ? CURSOR : ' ', 'cursor');
+  }, 320);
+}
+(function frame() {
+  for (const s of screens) s.render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

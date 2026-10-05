@@ -2,7 +2,7 @@
 id: TT-003
 title: Build the 40x25 canvas character screen with font8x8 and C64/Spectrum palettes
 milestone: M0
-status: todo
+status: done
 agent: ui-dev
 model: opus
 depends: [TT-001]
