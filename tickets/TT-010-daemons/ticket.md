@@ -2,7 +2,7 @@
 id: TT-010
 title: Daemons — clock, beats, schedules, nerve/panic, endings precedence, scoring
 milestone: M1
-status: in-progress
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-009]
@@ -22,6 +22,6 @@ The per-turn systems in the exact order of ARCHITECTURE.md's turn pipeline, data
 `src/engine/daemons.js`, `src/engine/game.js` (wire daemons only), `tests/unit/daemons.test.js`, `tests/unit/determinism.test.js`, `tests/fixtures/*` (additive)
 
 ## Acceptance criteria
-- [ ] Ending precedence & midnight boundary tests pass.
-- [ ] Save-determinism test passes.
-- [ ] `npm run check` green.
+- [x] Ending precedence & midnight boundary tests pass.
+- [x] Save-determinism test passes.
+- [x] `npm run check` green.

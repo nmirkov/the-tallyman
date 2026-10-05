@@ -7,7 +7,7 @@
 // → chain notice before the terminal event → output normaliser.
 
 import {
-  LIMITS, CHAIN_BARRIERS, ENDED_VERBS, MIDNIGHT_TURN, TERMINAL_EVENT_TYPES, TERMINAL_HOST_OPS,
+  LIMITS, CHAIN_BARRIERS, ENDED_VERBS, TERMINAL_EVENT_TYPES, TERMINAL_HOST_OPS,
 } from './types.js';
 import { normalise } from './text.js';
 import { buildVocab } from './vocab.js';
@@ -19,9 +19,10 @@ import {
 } from './resolve.js';
 import {
   createRun, emit, emitText, message, say, runReaction, describeRoom, roomEvent, pictureEvent,
-  statusEvent, endEvent, ambientFor, testCond,
+  statusEvent, endEvent, ambientFor,
 } from './api.js';
 import { ACTIONS, SYSTEM_ACTIONS, ACTION_MESSAGES, performAction } from './actions/index.js';
+import { DAEMON_STEPS, DAEMON_MESSAGES, runDaemons } from './daemons.js';
 
 /**
  * @typedef {import('./types.js').OutputEvent} OutputEvent
@@ -58,43 +59,11 @@ function isTerminal(ev) {
 }
 
 /* ------------------------------------------------------------------------ *
- *  Per-turn steps D1–D9 (A7.6)                                              *
+ *  Per-turn steps D1–D9 (A7.6) live in daemons.js                           *
  * ------------------------------------------------------------------------ */
 
-const noop = () => {};
-
-/**
- * Daemon steps in pipeline order. `always` steps run even after the game ended this turn
- * (C10). D2–D6 are slots TT-010 fills from `daemons.js`; until then they do nothing.
- * @type {ReadonlyArray<{id: string, always: boolean, run: (run: Run) => void}>}
- */
-export const DAEMON_STEPS = Object.freeze([
-  { id: 'D1 clock', always: true, run: (r) => { r.state.turn = Math.min(r.state.turn + 1, MIDNIGHT_TURN); } },
-  { id: 'D2 beats', always: false, run: noop },
-  { id: 'D3 schedules', always: false, run: noop },
-  { id: 'D4 story daemons', always: false, run: noop },
-  { id: 'D5 light', always: false, run: noop },
-  { id: 'D6 nerve & panic', always: false, run: noop },
-  {
-    id: 'D7 ambience', always: false,
-    run: (r) => {
-      const id = ambientFor(r.state, r.content);
-      if (id !== r.turnStart.ambient) emit(r, { type: 'ambient', id });
-    },
-  },
-  {
-    id: 'D8 endings', always: true,
-    run: (r) => {
-      if (r.state.ended !== null) return;
-      const ending = (r.content.endings ?? []).find((e) => e.when !== undefined && testCond(r, e.when));
-      if (ending) {
-        r.state.ended = ending.id;
-        r.state.ctx.pending = null;
-      }
-    },
-  },
-  { id: 'D9 status', always: true, run: (r) => emit(r, statusEvent(r)) },
-]);
+/** The ordered daemon steps (A1: game.js exports them; daemons.js defines them). */
+export { DAEMON_STEPS };
 
 /**
  * Steps B and D1–D9 after a world command's action phase, then the `end` event.
@@ -108,7 +77,7 @@ function finishTurn(run, cmd) {
       if (run.state.ended !== null) break;
     }
   }
-  for (const step of DAEMON_STEPS) if (step.always || run.state.ended === null) step.run(run);
+  runDaemons(run, cmd);
   if (run.state.ended !== null) emit(run, endEvent(run));
 }
 
@@ -129,7 +98,7 @@ export function createGame(options = {}) {
   const vocab = buildVocab(content);
   const originalSeed = seed >>> 0;
   const resolverOpts = { strict };
-  const run = createRun({ state: createState(content, originalSeed), content, vocab, strict, messages: ACTION_MESSAGES });
+  const run = createRun({ state: createState(content, originalSeed), content, vocab, strict, messages: { ...ACTION_MESSAGES, ...DAEMON_MESSAGES } });
   const api = run.api;
   /** @type {import('./types.js').State|null} */
   let undoSnapshot = null;
@@ -388,7 +357,10 @@ export function createGame(options = {}) {
 
   /** One world command: action phase A, then B and D1–D9 (A7.6). */
   function runTurn(cmd) {
-    run.turnStart = { roomId: run.state.roomId, lit: isLit(run.state, content), ambient: ambientFor(run.state, content) };
+    run.turnStart = {
+      roomId: run.state.roomId, lit: isLit(run.state, content), ambient: ambientFor(run.state, content),
+      nerve: run.state.nerve,
+    };
     run.panicked = false;
     performAction(run, cmd, registry);
     finishTurn(run, cmd);

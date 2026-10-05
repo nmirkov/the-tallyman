@@ -105,10 +105,10 @@ test('culprit with evidence < threshold → `weak` (laughs, nerve +15), 1 turn, 
   at(g, 'office', (s) => withEvidence(s, { items: ['ledger_page'] }));
   const n0 = snap(g).nerve;
   assert.deepEqual(say(g, 'accuse pike'), ['Pike laughs in your face.']);
-  assert.equal(snap(g).nerve, n0 + 15);
+  assert.equal(snap(g).nerve, n0 + 15 - 1);   // D6 (TT-010): the lit office also gives −1 per turn
   assert.equal(snap(g).turn, 1);
   assert.deepEqual(say(g, 'accuse sergeant'), ['Pike laughs in your face.']);
-  assert.equal(snap(g).nerve, n0 + 30);
+  assert.equal(snap(g).nerve, n0 + 30 - 2);
   assert.equal(snap(g).npcs.pike.loc, 'office');
   assert.deepEqual(snap(g).awarded, []);
 });
