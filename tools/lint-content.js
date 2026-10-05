@@ -363,7 +363,7 @@ function runRules(content, options, errors, warnings) {
           else if (vars[v.var].type !== 'int') err('L04', `${kp}.var`, `var ${v.var} is not an int`);
         } else if (!Number.isInteger(v)) err('L04', kp, 'expected an integer or {var}');
         break;
-      case 'evidence': case 'moneyGte': case 'nerveGte': if (typeof v !== 'number') err('L04', kp, 'expected a number'); break;
+      case 'evidence': case 'moneyGte': case 'nerveGte': if (!Number.isFinite(v)) err('L04', kp, 'expected a finite number'); break;
       case 'found': ref(hasOwn(evidence, v), kp, 'evidence', v); break;
       case 'noted': ref(hasOwn(notes, v), kp, 'note', v); break;
       case 'awarded': ref(hasOwn(awards, v), kp, 'award', v); if (hasOwn(awards, v)) awardRefs.add(v); break;
@@ -382,11 +382,12 @@ function runRules(content, options, errors, warnings) {
     const kp = (k) => `${p}.${k}`;
     if (hasOwn(r, 'if')) walkCond(r.if, kp('if'));
     if (hasOwn(r, 'else')) walkReaction(r.else, kp('else'));
-    if (hasOwn(r, 'chance') && !(typeof r.chance === 'number' && r.chance >= 0 && r.chance <= 1)) err('L04', kp('chance'), 'expected a number 0..1');
+    if (hasOwn(r, 'chance') && !(Number.isFinite(r.chance) && r.chance >= 0 && r.chance <= 1)) err('L04', kp('chance'), 'expected a number 0..1');
     if (hasOwn(r, 'style') && !TEXT_STYLES.includes(r.style)) err('L04', kp('style'), `unknown style ${q(r.style)}`);
     if (hasOwn(r, 'continue') && typeof r.continue !== 'boolean') err('L04', kp('continue'), 'expected a boolean');
     for (const k of ['sfx', 'music']) if (hasOwn(r, k) && typeof r[k] !== 'string') err('L04', kp(k), 'expected a string');
-    for (const k of ['pause', 'money', 'nerve']) if (hasOwn(r, k) && typeof r[k] !== 'number') err('L04', kp(k), 'expected a number');
+    // Finite only: Infinity / NaN would reach state (or an event) and make saves unloadable.
+    for (const k of ['pause', 'money', 'nerve']) if (hasOwn(r, k) && !Number.isFinite(r[k])) err('L04', kp(k), 'expected a finite number');
     if (hasOwn(r, 'say')) walkText(r.say, kp('say'));
     if (hasOwn(r, 'pick')) {
       if (!Array.isArray(r.pick) || r.pick.length === 0) err('L04', kp('pick'), 'expected a non-empty array of Text');
@@ -402,7 +403,7 @@ function runRules(content, options, errors, warnings) {
         if (!isObj(decl)) { err('L03', vp, `unknown var ${q(name)}`); continue; }
         if (isObj(val)) {
           const [op] = Object.keys(val);
-          if (Object.keys(val).length !== 1 || !['add', 'turnPlus'].includes(op) || typeof val[op] !== 'number') err('L04', vp, 'expected a value, {add: n} or {turnPlus: n}');
+          if (Object.keys(val).length !== 1 || !['add', 'turnPlus'].includes(op) || !Number.isInteger(val[op])) err('L04', vp, 'expected a value, {add: n} or {turnPlus: n} (n an integer)');
           else if (decl.type !== 'int') err('L04', vp, `{${op}} needs an int var; ${name} is ${decl.type}`);
         } else {
           const prob = varProblem(decl, val);

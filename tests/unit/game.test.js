@@ -14,13 +14,8 @@ import {
   newGame, cloneContent, texts, types, last, play, setup,
 } from '../fixtures/harness.js';
 
-/** Status events without `nerve` (D6 nerve is TT-010's; the rest of A15 is exact). */
-const noNerve = (events) => events.map((e) => {
-  if (e.type !== 'status') return e;
-  const { nerve, ...rest } = e;
-  return rest;
-});
-const status = (room, roomId, time, score, turns) => ({ type: 'status', room, roomId, time, score, maxScore: 10, turns });
+/** A15 status event, nerve included (D6 is live since TT-010, so A15 is asserted exactly). */
+const status = (room, roomId, time, score, turns, nerve) => ({ type: 'status', room, roomId, time, score, maxScore: 10, nerve, turns });
 const sys = (text) => ({ type: 'text', style: 'system', text });
 const txt = (text) => ({ type: 'text', text });
 const title = (text) => ({ type: 'text', style: 'title', text });
@@ -29,13 +24,13 @@ describe('A15 worked example', () => {
   const game = newGame(a15);
 
   test('start() is the refresh bundle with intro', () => {
-    assert.deepEqual(noNerve(game.start()), [
+    assert.deepEqual(game.start(), [
       { type: 'clear' },
       { type: 'room', id: 'platform', name: 'Platform' },
       { type: 'picture', id: 'platform', graphics: true },
       { type: 'ambient', id: 'rain' },
       { type: 'music', id: 'stop' },
-      status('Platform', 'platform', '21:30', 0, 0),
+      status('Platform', 'platform', '21:30', 0, 0, 10),
       txt('The last train pulls away into the rain.'),
       title('Platform'),
       txt('Rain hammers the canopy of a deserted platform. The waiting room lies north.'),
@@ -44,7 +39,7 @@ describe('A15 worked example', () => {
   });
 
   test('input 1: N', () => {
-    assert.deepEqual(noNerve(game.input('N')), [
+    assert.deepEqual(game.input('N'), [
       { type: 'room', id: 'waiting', name: 'Waiting Room' },
       { type: 'picture', id: 'waiting_room', graphics: true },
       title('Waiting Room'),
@@ -52,7 +47,7 @@ describe('A15 worked example', () => {
       txt('You can see a brass key, an iron key and a torch here.'),
       txt('Exits: south, down.'),
       { type: 'ambient', id: 'none' },
-      status('Waiting Room', 'waiting', '21:30', 0, 1),
+      status('Waiting Room', 'waiting', '21:30', 0, 1, 9),
     ]);
   });
 
@@ -70,10 +65,10 @@ describe('A15 worked example', () => {
   });
 
   test('input 3: BRASS completes take brass_key (1 turn)', () => {
-    assert.deepEqual(noNerve(game.input('BRASS')), [
+    assert.deepEqual(game.input('BRASS'), [
       txt('Taken.'),
       { type: 'sfx', id: 'pickup' },
-      status('Waiting Room', 'waiting', '21:31', 0, 2),
+      status('Waiting Room', 'waiting', '21:31', 0, 2, 8),
     ]);
     assert.deepEqual(game.snapshot().ctx, {
       it: 'brass_key', them: [], npc: null,
@@ -84,11 +79,11 @@ describe('A15 worked example', () => {
   test('input 4: TAKE TORCH THEN SAVE 2 THEN S', () => {
     const ev = game.input('TAKE TORCH THEN SAVE 2 THEN S');
     const storage = ev.pop();
-    assert.deepEqual(noNerve(ev), [
+    assert.deepEqual(ev, [
       txt('Taken.'),
       { type: 'sfx', id: 'pickup' },
       sys('[Your score has gone up by 5 points.]'),
-      status('Waiting Room', 'waiting', '21:31', 5, 3),
+      status('Waiting Room', 'waiting', '21:31', 5, 3, 7),
       sys('(Commands after SAVE were ignored.)'),
     ]);
     assert.equal(storage.type, 'storage');
@@ -102,24 +97,24 @@ describe('A15 worked example', () => {
   });
 
   test('input 5: D into the dark cellar', () => {
-    assert.deepEqual(noNerve(game.input('D')), [
+    assert.deepEqual(game.input('D'), [
       { type: 'room', id: 'cellar', name: 'Cellar' },
       { type: 'picture', id: null, graphics: true },
       title('Darkness'),
       txt('It is pitch dark. You can\'t see a thing, but you could feel your way back the way you came.'),
       { type: 'ambient', id: 'drone' },
-      status('Cellar', 'cellar', '21:32', 5, 4),
+      status('Cellar', 'cellar', '21:32', 5, 4, 12),
     ]);
   });
 
   test('input 6: UNDO restores the state before input 5', () => {
-    assert.deepEqual(noNerve(game.input('UNDO')), [
+    assert.deepEqual(game.input('UNDO'), [
       { type: 'clear' },
       { type: 'room', id: 'waiting', name: 'Waiting Room' },
       { type: 'picture', id: 'waiting_room', graphics: true },
       { type: 'ambient', id: 'none' },
       { type: 'music', id: 'stop' },
-      status('Waiting Room', 'waiting', '21:31', 5, 3),
+      status('Waiting Room', 'waiting', '21:31', 5, 3, 7),
       title('Waiting Room'),
       txt('A cold waiting room. A hatch in the floor stands open.'),
       txt('You can see an iron key here.'),
@@ -138,7 +133,7 @@ describe('A15 worked example', () => {
     assert.deepEqual(from().input('UNDO'), [sys('You can\'t undo any further.')]);
     assert.deepEqual(from().input('xyzzy. n'), [sys('I don\'t know the word "xyzzy".'), sys('(Commands after XYZZY were ignored.)')]);
     const again = from().input('again');
-    assert.deepEqual(noNerve(again), [txt('You already have that.'), status('Waiting Room', 'waiting', '21:32', 5, 4)]);
+    assert.deepEqual(again, [txt('You already have that.'), status('Waiting Room', 'waiting', '21:32', 5, 4, 6)]);
     assert.deepEqual(from().input('load 2 then n'), [sys('(Commands after LOAD were ignored.)'), { type: 'storage', op: 'load', slot: 2 }]);
     assert.deepEqual(texts(from().input('drop torch')), ['Dropped.']);
     assert.deepEqual(texts(from().input('throw torch')), ['You\'d better hang on to that.']);

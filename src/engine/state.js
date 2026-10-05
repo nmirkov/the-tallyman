@@ -6,6 +6,7 @@ import {
   STATE_VERSION, SAVE_FORMAT, LIMITS, MIDNIGHT_TURN, RULE_DEFAULTS, START_TIME, TURN_SECONDS,
   PLAYER, DIRECTIONS, PENDING_KINDS,
 } from './types.js';
+import { VERBS, PRONOUN_WORDS } from './vocab.js';
 
 /** Top-level State keys in A3 order. */
 export const STATE_KEYS = Object.freeze([
@@ -143,6 +144,48 @@ export function varProblem(decl, value) {
 }
 
 /* ------------------------------------------------------------------------ *
+ *  Item location invariants (A3.1 S1, S3, S4) — shared by validateSave and  *
+ *  the runtime state operations, so the engine never commits a state its   *
+ *  own saves would reject.                                                  *
+ * ------------------------------------------------------------------------ */
+
+const hasKey = (obj, key) => obj != null && Object.prototype.hasOwnProperty.call(obj, key);
+
+/**
+ * Why item `id`'s location or `worn` flag breaks A3.1 (V9), or null.
+ * @param {import('./types.js').State} state
+ * @param {import('./types.js').ContentBundle} content
+ * @param {string} id
+ * @returns {{field: 'loc'|'worn', problem: string}|null}
+ */
+export function itemLocProblem(state, content, id) {
+  const st = state.items[id];
+  const loc = st.loc;
+  if (loc !== null && typeof loc !== 'string') return { field: 'loc', problem: 'expected a string or null' };
+  if (typeof loc === 'string' && loc !== PLAYER && !hasKey(content.rooms, loc) && !hasKey(content.npcs, loc)) {
+    if (!hasKey(content.items, loc)) return { field: 'loc', problem: `unknown location "${loc}"` };
+    if (!content.items[loc].container) return { field: 'loc', problem: `"${loc}" is not a container` };
+  }
+  if (st.worn === true && loc !== PLAYER) return { field: 'worn', problem: 'worn but not carried' };
+  return null;
+}
+
+/**
+ * True when following `loc` from item `id` through items revisits `id` or never ends (V10).
+ * @param {Record<string, {loc: unknown}>} items
+ * @param {string} id
+ */
+export function inContainmentCycle(items, id) {
+  const limit = Object.keys(items).length;
+  let cur = items[id].loc;
+  for (let steps = 0; typeof cur === 'string' && hasKey(items, cur); steps++) {
+    if (cur === id || steps >= limit) return true;
+    cur = items[cur].loc;
+  }
+  return false;
+}
+
+/* ------------------------------------------------------------------------ *
  *  validateSave                                                             *
  * ------------------------------------------------------------------------ */
 
@@ -233,10 +276,25 @@ function lookups(content) {
   return { rooms, items, npcs, isRef };
 }
 
-/** A resolved Command (A3.3) with existing ids ('player' = self-reference, TT-009). Unknown extra keys are tolerated. */
-function checkCommand(cmd, path, L, content) {
+/** Verb ids a stored command may name: engine verbs plus content verbs (A6.1). */
+function isKnownVerb(verb, content) {
+  return typeof verb === 'string' && (VERBS.some((v) => v.id === verb)
+    || (Array.isArray(content.verbs) && content.verbs.some((v) => v && v.id === verb)));
+}
+
+/** Fields shared by resolved and parsed commands: verb, verbWord, raw, prep, dir, arg. */
+function checkCommandBase(cmd, path, content) {
   if (!isPlainObject(cmd)) corrupt(path, 'expected an object');
   for (const k of ['verb', 'verbWord', 'raw']) if (typeof cmd[k] !== 'string') corrupt(`${path}.${k}`, 'expected a string');
+  if (!isKnownVerb(cmd.verb, content)) corrupt(`${path}.verb`, `unknown verb "${cmd.verb}"`);
+  if (has(cmd, 'prep') && typeof cmd.prep !== 'string') corrupt(`${path}.prep`, 'expected a string');
+  if (has(cmd, 'dir') && !DIRECTIONS.includes(cmd.dir)) corrupt(`${path}.dir`, `unknown direction "${cmd.dir}"`);
+  if (has(cmd, 'arg') && typeof cmd.arg !== 'string') corrupt(`${path}.arg`, 'expected a string');
+}
+
+/** A resolved Command (A3.3) with existing ids ('player' = self-reference, TT-009). Unknown extra keys are tolerated. */
+function checkCommand(cmd, path, L, content) {
+  checkCommandBase(cmd, path, content);
   const isObjRef = (id) => id === PLAYER || L.isRef(id);
   if (has(cmd, 'dobj')) {
     const d = cmd.dobj;
@@ -244,8 +302,7 @@ function checkCommand(cmd, path, L, content) {
     else if (!isObjRef(d)) corrupt(`${path}.dobj`, `unknown id "${d}"`);
   }
   if (has(cmd, 'iobj') && !isObjRef(cmd.iobj)) corrupt(`${path}.iobj`, `unknown id "${cmd.iobj}"`);
-  if (has(cmd, 'dir') && !DIRECTIONS.includes(cmd.dir)) corrupt(`${path}.dir`, `unknown direction "${cmd.dir}"`);
-  for (const k of ['prep', 'topicText', 'arg']) if (has(cmd, k) && typeof cmd[k] !== 'string') corrupt(`${path}.${k}`, 'expected a string');
+  if (has(cmd, 'topicText') && typeof cmd.topicText !== 'string') corrupt(`${path}.topicText`, 'expected a string');
   if (has(cmd, 'topic') && cmd.topic !== null && !(typeof cmd.topic === 'string' && (has(content.topics, cmd.topic) || L.isRef(cmd.topic)))) {
     corrupt(`${path}.topic`, `unknown topic "${cmd.topic}"`);
   }
@@ -253,7 +310,49 @@ function checkCommand(cmd, path, L, content) {
   if (has(cmd, 'confirmed') && cmd.confirmed !== true) corrupt(`${path}.confirmed`, 'expected true');
 }
 
-/** A pending question (A3.3). */
+const NP_FORMS = ['words', 'pronoun', 'all', 'list'];
+
+/**
+ * A syntax-level noun phrase (ParsedNounPhrase, A6.2 P4): exactly one of words / pronoun /
+ * all / list; `except` only with `all`; list and except elements are simple phrases.
+ * @param {unknown} np
+ * @param {string} path
+ * @param {boolean} simple  Only `words` / `pronoun` allowed (list / except elements).
+ */
+function checkNounPhrase(np, path, simple) {
+  if (!isPlainObject(np)) corrupt(path, 'expected a noun phrase object');
+  const forms = NP_FORMS.filter((k) => has(np, k));
+  if (forms.length !== 1) corrupt(path, `expected exactly one of ${NP_FORMS.join(' / ')}`);
+  const [form] = forms;
+  if (simple && form !== 'words' && form !== 'pronoun') corrupt(path, 'expected words or a pronoun');
+  if (form === 'words' && !(Array.isArray(np.words) && np.words.length > 0 && np.words.every((w) => typeof w === 'string' && w !== ''))) {
+    corrupt(`${path}.words`, 'expected a non-empty array of words');
+  }
+  if (form === 'pronoun' && !PRONOUN_WORDS.includes(np.pronoun)) corrupt(`${path}.pronoun`, `unknown pronoun "${np.pronoun}"`);
+  if (form === 'all' && np.all !== true) corrupt(`${path}.all`, 'expected true');
+  if (has(np, 'except')) {
+    if (form !== 'all') corrupt(`${path}.except`, 'only allowed with all');
+    if (!Array.isArray(np.except) || np.except.length === 0) corrupt(`${path}.except`, 'expected a non-empty array');
+    np.except.forEach((x, i) => checkNounPhrase(x, `${path}.except[${i}]`, true));
+  }
+  if (form === 'list') {
+    if (!Array.isArray(np.list) || np.list.length < 2) corrupt(`${path}.list`, 'expected an array of at least two phrases');
+    np.list.forEach((x, i) => checkNounPhrase(x, `${path}.list[${i}]`, true));
+  }
+}
+
+/** A parsed (not yet bound) command, as a disambiguation question stores it (A3.3). */
+function checkParsedCommand(cmd, path, content) {
+  checkCommandBase(cmd, path, content);
+  for (const k of ['dobj', 'iobj']) if (has(cmd, k)) checkNounPhrase(cmd[k], `${path}.${k}`, false);
+  if (has(cmd, 'topic') && typeof cmd.topic !== 'string') corrupt(`${path}.topic`, 'expected a string');
+}
+
+/**
+ * A pending question (A3.3, V12). A disambiguation must be resumable exactly as the resolver
+ * stored it: the asked slot exists in the command, the candidates are distinct existing ids,
+ * a list `index` points into a `list` phrase with the ids resolved so far in `bound`.
+ */
 function checkPending(p, path, L, content) {
   if (!PENDING_KINDS.includes(p.kind)) corrupt(`${path}.kind`, `unknown kind "${p.kind}"`);
   if (typeof p.text !== 'string') corrupt(`${path}.text`, 'expected a string');
@@ -262,18 +361,34 @@ function checkPending(p, path, L, content) {
     if (has(p, 'cancelText') && typeof p.cancelText !== 'string') corrupt(`${path}.cancelText`, 'expected a string');
     return;
   }
-  const c = p.command;
-  if (!isPlainObject(c)) corrupt(`${path}.command`, 'expected an object');
-  for (const k of ['verb', 'raw']) if (typeof c[k] !== 'string') corrupt(`${path}.command.${k}`, 'expected a string');
-  if (p.slot !== 'dobj' && p.slot !== 'iobj') corrupt(`${path}.slot`, 'expected "dobj" or "iobj"');
-  if (!Array.isArray(p.candidates) || p.candidates.length === 0) corrupt(`${path}.candidates`, 'expected a non-empty array');
-  p.candidates.forEach((id, i) => { if (!L.isRef(id)) corrupt(`${path}.candidates[${i}]`, `unknown id "${id}"`); });
-  if (has(p, 'index') && !(Number.isInteger(p.index) && p.index >= 0)) corrupt(`${path}.index`, 'expected an integer >= 0');
+  checkParsedCommand(p.command, `${path}.command`, content);
+  const slot = p.slot;
+  if (slot !== 'dobj' && slot !== 'iobj') corrupt(`${path}.slot`, 'expected "dobj" or "iobj"');
+  const phrase = p.command[slot];
+  if (phrase === undefined) corrupt(`${path}.slot`, `the command has no ${slot}`);
+  if (!Array.isArray(p.candidates) || p.candidates.length < 2) corrupt(`${path}.candidates`, 'expected at least two candidates');
+  idList(p.candidates, L.isRef, `${path}.candidates`, 'id');
   if (!isPlainObject(p.bound)) corrupt(`${path}.bound`, 'expected an object');
-  for (const k of ['dobj', 'iobj']) {
-    if (!has(p.bound, k)) continue;
-    const ids = Array.isArray(p.bound[k]) ? p.bound[k] : [p.bound[k]];
-    if (!ids.every(L.isRef)) corrupt(`${path}.bound.${k}`, 'unknown id');
+  for (const k of Object.keys(p.bound)) if (!['dobj', 'iobj', 'all'].includes(k)) corrupt(`${path}.bound.${k}`, 'unexpected field');
+  if (has(p.bound, 'all') && p.bound.all !== true) corrupt(`${path}.bound.all`, 'expected true');
+  if (slot === 'iobj' && has(p.bound, 'dobj')) corrupt(`${path}.bound.dobj`, 'bound before the iobj it depends on');
+  const otherSlot = slot === 'dobj' ? 'iobj' : 'dobj';
+  if (has(p.bound, otherSlot)) {
+    const v = p.bound[otherSlot];
+    const ok = Array.isArray(v) ? v.length > 0 && v.every(L.isRef) : v === PLAYER || L.isRef(v);
+    if (!ok) corrupt(`${path}.bound.${otherSlot}`, 'unknown id');
+  }
+  if (has(p, 'index')) {
+    if (!Array.isArray(phrase.list)) corrupt(`${path}.index`, `the ${slot} phrase is not a list`);
+    if (!(Number.isInteger(p.index) && p.index >= 0 && p.index < phrase.list.length)) {
+      corrupt(`${path}.index`, `expected an integer 0..${phrase.list.length - 1}`);
+    }
+    if (!has(phrase.list[p.index], 'words')) corrupt(`${path}.index`, 'the asked element has no words');
+    const prefix = p.bound[slot];
+    if (!Array.isArray(prefix) || !prefix.every(L.isRef)) corrupt(`${path}.bound.${slot}`, 'expected the ids resolved so far');
+  } else {
+    if (!has(phrase, 'words')) corrupt(`${path}.command.${slot}`, 'only a words phrase can be ambiguous');
+    if (has(p.bound, slot)) corrupt(`${path}.bound.${slot}`, 'the slot being asked about is already bound');
   }
 }
 
@@ -357,15 +472,8 @@ function validate(data, content) {
 
   // V9 — locations
   for (const id of Object.keys(L.items)) {
-    const st = s.items[id];
-    const path = `state.items.${id}`;
-    const loc = st.loc;
-    if (loc !== null && typeof loc !== 'string') corrupt(`${path}.loc`, 'expected a string or null');
-    if (typeof loc === 'string' && loc !== PLAYER && !isRoom(loc) && !has(L.npcs, loc)) {
-      if (!has(L.items, loc)) corrupt(`${path}.loc`, `unknown location "${loc}"`);
-      if (!L.items[loc].container) corrupt(`${path}.loc`, `"${loc}" is not a container`);
-    }
-    if (st.worn === true && loc !== PLAYER) corrupt(`${path}.worn`, 'worn but not carried');
+    const p = itemLocProblem(s, content, id);
+    if (p) corrupt(`state.items.${id}.${p.field}`, p.problem);
   }
   for (const id of Object.keys(L.npcs)) {
     const loc = s.npcs[id].loc;
@@ -373,15 +481,7 @@ function validate(data, content) {
   }
 
   // V10 — containment cycles
-  const ids = Object.keys(L.items);
-  for (const id of ids) {
-    let cur = s.items[id].loc;
-    let steps = 0;
-    while (typeof cur === 'string' && has(L.items, cur)) {
-      if (cur === id || ++steps > ids.length) fail(`corrupt save: containment cycle at ${id}`);
-      cur = s.items[cur].loc;
-    }
-  }
+  for (const id of Object.keys(L.items)) if (inContainmentCycle(s.items, id)) fail(`corrupt save: containment cycle at ${id}`);
 
   // V11 — vars and flags
   for (const [name, decl] of Object.entries(content.vars ?? {})) {

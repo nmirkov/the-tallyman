@@ -3,7 +3,7 @@
 
 import { runOf, say, setItem, testCond } from '../api.js';
 import {
-  defineActions, refuse, succeed, isItem, itemDef, itemState, unreachable, FAIL,
+  defineActions, refuse, succeed, isItem, itemDef, itemState, FAIL,
 } from './common.js';
 
 export const messages = Object.freeze({
@@ -22,7 +22,6 @@ const isLight = (api, id) => isItem(api, id) && itemDef(api, id).light !== undef
 function turnOn(cmd, api) {
   const id = cmd.dobj;
   if (!isLight(api, id)) return refuse(api, 'notSwitchable');
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   const st = itemState(api, id);
   if (st.lit) return refuse(api, 'alreadyOn', id);
   if (st.fuel === 0) return refuse(api, 'burntOut', id);
@@ -39,7 +38,6 @@ function turnOn(cmd, api) {
 function turnOff(cmd, api) {
   const id = cmd.dobj;
   if (!isLight(api, id)) return refuse(api, 'notSwitchableOff');
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   if (!itemState(api, id).lit) return refuse(api, 'alreadyOff', id);
   setItem(runOf(api), id, { lit: false });
   return succeed(api, 'switchedOff', id);

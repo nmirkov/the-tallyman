@@ -63,6 +63,40 @@ export function unreachable(api, id) {
   return isItem(api, id) && !world.isReachable(api.state, api.content, id);
 }
 
+/**
+ * Verbs that physically handle their direct object, and verbs whose indirect object is a
+ * tool or target the player must touch (A8.1 "reachable"). Observation (EXAMINE, READ, …),
+ * SHOW, conversation and BUY only need visibility.
+ */
+const REACH_DOBJ = new Set([
+  'take', 'drop', 'put', 'open', 'close', 'unlock', 'lock', 'push', 'pull', 'move', 'turn_on', 'turn_off',
+  'wear', 'remove', 'eat', 'drink', 'throw', 'break', 'tear', 'cut', 'oil', 'use', 'touch', 'attack', 'give',
+  'arrest', 'free',
+]);
+const REACH_IOBJ = new Set(['put', 'unlock', 'lock', 'break', 'tear', 'cut', 'oil', 'use', 'attack', 'arrest']);
+
+/**
+ * Wraps a world handler with the A8.1 reachability rule — one check for every physical
+ * verb instead of one per handler: an item inside a closed container (even a transparent
+ * one the player carries) is refused with "You can't reach it." (the turn is spent, A7.4).
+ * It runs at the handler step (A7.5 step 4), so `before` reactions still see the command.
+ * @param {ActionDef} def
+ * @returns {ActionDef}
+ */
+export function reachGuard(def) {
+  const dobj = REACH_DOBJ.has(def.verb);
+  const iobj = REACH_IOBJ.has(def.verb);
+  if (!dobj && !iobj) return def;
+  const inner = def.run;
+  return Object.freeze({
+    ...def,
+    run(cmd, api) {
+      if ((dobj && unreachable(api, cmd.dobj)) || (iobj && unreachable(api, cmd.iobj))) return refuse(api, 'cantReach');
+      return inner(cmd, api);
+    },
+  });
+}
+
 /** Portable = an item that is neither `fixed` nor `scenery`. */
 export function portable(api, id) {
   const def = itemDef(api, id);

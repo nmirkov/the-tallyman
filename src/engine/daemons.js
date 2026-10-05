@@ -10,8 +10,8 @@
 import { MIDNIGHT_TURN, RULE_DEFAULTS } from './types.js';
 import { isLit, isVisible } from './world.js';
 import {
-  emit, say, sayMessage, runReaction, testCond, moveEntity, enterRoom, describeRoom,
-  pictureEvent, statusEvent, ambientFor, nameParams,
+  emit, say, sayMessage, runReaction, testCond, moveEntity, enterRoom, syncLight,
+  statusEvent, ambientFor, nameParams,
 } from './api.js';
 
 /**
@@ -105,10 +105,9 @@ function storyDaemons(run, cmd) {
  *  D5 light (fuel)                                                          *
  * ------------------------------------------------------------------------ */
 
-/** @param {Run} run */
+/** Fuel burn; the O5 re-description follows from runDaemons' syncLight. @param {Run} run */
 function light(run) {
   const { state, content } = run;
-  const wasLit = isLit(state, content);
   for (const id of Object.keys(state.items)) {
     const st = state.items[id];
     if (st.lit !== true || typeof st.fuel !== 'number') continue;
@@ -121,12 +120,6 @@ function light(run) {
     if (outText !== undefined) say(run, outText, undefined, id);
     else sayMessage(run, 'lightOut', nameParams(run, id));
   }
-  // O5: the player's room changed its lit state without the player moving.
-  const lit = isLit(state, content);
-  if (lit === wasLit) return;
-  emit(run, pictureEvent(run));
-  if (lit) describeRoom(run);
-  else sayMessage(run, 'dark');
 }
 
 /* ------------------------------------------------------------------------ *
@@ -235,6 +228,8 @@ export const DAEMON_STEPS = Object.freeze([
 /**
  * Runs D1–D9 for one world command. `run.turnStart` must hold the values from before
  * the action phase (`ambient`, `nerve`). Cond hooks evaluated by the steps see `cmd`.
+ * After every step the presentation follows any lighting change that step made (A9.2 O5:
+ * a beat, schedule, story daemon or burn-out that lights or darkens the room).
  * @param {Run} run
  * @param {Command|null} [cmd]
  */
@@ -242,7 +237,11 @@ export function runDaemons(run, cmd = null) {
   const saved = run.args;
   run.args = { phase: null, cmd, self: null };
   try {
-    for (const step of DAEMON_STEPS) if (step.always || !ended(run)) step.run(run, cmd);
+    for (const step of DAEMON_STEPS) {
+      if (!step.always && ended(run)) continue;
+      step.run(run, cmd);
+      syncLight(run);
+    }
   } finally {
     run.args = saved;
   }

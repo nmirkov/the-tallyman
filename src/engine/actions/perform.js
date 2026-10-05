@@ -1,10 +1,11 @@
 // Action phase "A" of a turn (A7.5): hazard → protection → `before` slots → handler →
 // `after` slots, per object for ALL / lists (A6.5), then the lighting-change
-// re-description (A9.2 O5). The turn pipeline around it lives in game.js.
+// re-description (A9.2 O5, api.syncLight). The turn pipeline around it lives in game.js.
+// Each object runs with its command established as the hook context (A5), so hooks that
+// handlers trigger (room entry, EXAMINE text, …) see `args.cmd`.
 
-import { isLit } from '../world.js';
 import {
-  runReaction, say, sayMessage, endGame, emit, pictureEvent, describeRoom, testCond, nameOf,
+  runReaction, say, sayMessage, endGame, testCond, nameOf, withCommand, syncLight,
 } from '../api.js';
 import { capitalise } from '../text.js';
 import { protect } from './protect.js';
@@ -102,23 +103,16 @@ function prefixFirstText(run, mark, name) {
  * @param {Record<string, import('./common.js').ActionDef>} registry
  */
 export function performAction(run, cmd, registry) {
-  const startRoom = run.state.roomId;
-  const startLit = isLit(run.state, run.content);
-  run.moved = false;
   if (Array.isArray(cmd.dobj)) {
     for (const id of cmd.dobj) {
       if (run.state.ended !== null) break;
       const mark = run.events.length;
-      actOnce(run, { ...cmd, dobj: id }, registry);
+      const one = { ...cmd, dobj: id };
+      withCommand(run, one, () => actOnce(run, one, registry));
       prefixFirstText(run, mark, capitalise(nameOf(run, id, 'bare')));
     }
   } else {
-    actOnce(run, cmd, registry);
+    withCommand(run, cmd, () => actOnce(run, cmd, registry));
   }
-  if (run.moved || run.state.roomId !== startRoom || run.state.ended !== null) return;
-  const lit = isLit(run.state, run.content);
-  if (lit === startLit) return;
-  emit(run, pictureEvent(run));
-  if (lit) describeRoom(run);
-  else sayMessage(run, 'dark');
+  syncLight(run);
 }

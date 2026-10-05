@@ -1,6 +1,7 @@
 // Object family (A8.5, A8.7): TAKE / DROP / PUT IN|ON / TAKE FROM, OPEN / CLOSE,
 // UNLOCK / LOCK [WITH], PUSH / PULL / MOVE, WEAR / REMOVE, EAT / DRINK, THROW, BREAK.
-// Personal / critical protection already ran (protect.js) before these handlers.
+// Personal / critical protection already ran (protect.js) before these handlers, and the
+// registry's reachGuard (common.js) refuses objects inside closed containers (A8.1).
 
 import { PLAYER } from '../types.js';
 import {
@@ -79,7 +80,6 @@ function take(cmd, api) {
     }
     return refuse(api, 'fixed');
   }
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   world.moveItem(api.state, id, PLAYER);
   if (itemState(api, id).moved === false) itemState(api, id).moved = true;
   tell(api, 'taken');
@@ -112,7 +112,6 @@ function put(cmd, api) {
   if (id === target || within(api, target, id)) return refuse(api, 'putInside');
   const c = isItem(api, target) ? itemDef(api, target).container : undefined;
   if (!c || (onto && !c.supporter) || (!onto && c.supporter)) return refuse(api, onto ? 'cantPutOn' : 'cantPutIn', target);
-  if (unreachable(api, target)) return refuse(api, 'cantReach');
   if (!world.isOpen(api.state, api.content, target)) return refuse(api, 'containerClosed', target);
   if (c.capacity !== undefined && world.contentsOf(api.state, target).length >= c.capacity) {
     return refuse(api, onto ? 'noRoomOn' : 'noRoomIn', target);
@@ -130,7 +129,6 @@ const openable = (api, id) => isItem(api, id) && itemDef(api, id).openable === t
 function open(cmd, api) {
   const id = cmd.dobj;
   if (!openable(api, id)) return refuse(api, 'notOpenable');
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   if (itemState(api, id).open) return refuse(api, 'alreadyOpen', id);
   if (itemState(api, id).locked) return refuse(api, 'isLocked', id);
   setItem(runOf(api), id, { open: true });
@@ -144,7 +142,6 @@ function open(cmd, api) {
 function close(cmd, api) {
   const id = cmd.dobj;
   if (!openable(api, id)) return refuse(api, 'notCloseable');
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   if (!itemState(api, id).open) return refuse(api, 'alreadyClosed', id);
   setItem(runOf(api), id, { open: false });
   tell(api, 'closed');
@@ -154,7 +151,8 @@ function close(cmd, api) {
 
 /**
  * Finds the key for UNLOCK / LOCK: the named `iobj` (must be carried and fit) or the
- * item's `keyId` if carried, announced "(with the brass key)". Returns null after refusing.
+ * item's `keyId` if carried and reachable (not shut in a carried bag, A8.1), announced
+ * "(with the brass key)". Returns null after refusing.
  */
 function keyFor(cmd, api, noKeyMsg) {
   const id = cmd.dobj;
@@ -170,7 +168,7 @@ function keyFor(cmd, api, noKeyMsg) {
     }
     return cmd.iobj;
   }
-  if (keyId === undefined || !world.isCarried(api.state, keyId)) {
+  if (keyId === undefined || !world.isCarried(api.state, keyId) || unreachable(api, keyId)) {
     refuse(api, noKeyMsg, id);
     return null;
   }
@@ -181,7 +179,6 @@ function keyFor(cmd, api, noKeyMsg) {
 function unlock(cmd, api) {
   const id = cmd.dobj;
   if (!openable(api, id)) return refuse(api, 'cantUnlock');
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   if (!itemState(api, id).locked) return refuse(api, 'notLocked', id);
   if (!keyFor(cmd, api, 'noKey')) return FAIL;
   setItem(runOf(api), id, { locked: false });
@@ -191,7 +188,6 @@ function unlock(cmd, api) {
 function lock(cmd, api) {
   const id = cmd.dobj;
   if (!openable(api, id) || itemDef(api, id).keyId === undefined) return refuse(api, 'cantLock');
-  if (unreachable(api, id)) return refuse(api, 'cantReach');
   if (itemState(api, id).locked) return refuse(api, 'alreadyLocked', id);
   if (itemState(api, id).open) return refuse(api, 'closeFirst', id);
   if (!keyFor(cmd, api, 'noKeyToLock')) return FAIL;
@@ -233,7 +229,6 @@ function consume(slot, refusal) {
     const id = cmd.dobj;
     const reaction = isItem(api, id) ? itemDef(api, id)[slot] : undefined;
     if (reaction === undefined) return refuse(api, refusal);
-    if (unreachable(api, id)) return refuse(api, 'cantReach');
     runReaction(runOf(api), reaction, { phase: slot, cmd, self: id });
     moveEntity(runOf(api), id, null);
     return OK;

@@ -3,7 +3,7 @@
 // and description (A8.3 step 7, A8.4), and the status / picture / end events (A9).
 //
 // A `run` is the engine's working context, one per game:
-//   { content, vocab, strict, messages, state, events, args, turnStart, moved, panicked,
+//   { content, vocab, strict, messages, state, events, args, turnStart, shown, panicked,
 //     api, hook }
 // `state` is replaced on LOAD / UNDO / RESTART; `events` is the output buffer of the
 // current call; `args` is the hook context ({phase, cmd, self}) of the code running now.
@@ -12,7 +12,7 @@
 import { MESSAGES, PLAYER, REACTION_ORDER, DIRECTION_NAMES } from './types.js';
 import * as rng from './rng.js';
 import { interpolate, formatMoney, listJoin, withArticle, capitalise } from './text.js';
-import { varProblem, timeString } from './state.js';
+import { varProblem, timeString, itemLocProblem, inContainmentCycle } from './state.js';
 import * as world from './world.js';
 
 /**
@@ -31,8 +31,9 @@ import * as world from './world.js';
  * @property {State} state
  * @property {OutputEvent[]} events
  * @property {HookCtx} args
- * @property {{roomId: string, lit: boolean, ambient: string}|null} turnStart
- * @property {boolean} moved      The player changed room during the current command.
+ * @property {{roomId: string, lit: boolean, ambient: string, nerve: number}|null} turnStart
+ * @property {{roomId: string, lit: boolean}|null} shown  Room and lit state the player was
+ *   last shown (A9.2 O5); set at turn start and by every room description.
  * @property {boolean} panicked   Panic moved the player this turn (stops the chain).
  * @property {HookApi} api
  * @property {(id: string, args?: object) => unknown} hook   CallHook for world.js.
@@ -65,7 +66,7 @@ export function createRun({ state, content, vocab = null, strict = false, messag
   /** @type {Run} */
   const run = {
     content, vocab, strict, messages, state, events: [], args: NO_ARGS,
-    turnStart: null, moved: false, panicked: false, api: null, hook: null,
+    turnStart: null, shown: null, panicked: false, api: null, hook: null,
   };
   run.hook = (id, args) => callHook(run, id, args);
   run.api = createApi(run);
@@ -92,6 +93,19 @@ function withArgs(run, args, fn) {
   } finally {
     run.args = saved;
   }
+}
+
+/**
+ * Runs `fn` with `cmd` as the command being executed, so every hook it triggers — handler
+ * services such as room entry or EXAMINE text included — sees `args.cmd` (A5 context table).
+ * @param {Run} run
+ * @param {import('./types.js').Command|null} cmd
+ * @param {() => T} fn
+ * @returns {T}
+ * @template T
+ */
+export function withCommand(run, cmd, fn) {
+  return withArgs(run, { phase: null, cmd, self: null }, fn);
 }
 
 /** Merges partial hook args over the current ones. */
@@ -278,6 +292,25 @@ function requireItem(run, id) {
 }
 
 /**
+ * A3.1 invariants of one item after a state operation changed it (S1 location, S3
+ * containers only, no cycles, S4 `worn` ⇒ carried). The same predicates validateSave uses
+ * (V9, V10), so an operation can never commit a state its own save would reject; a
+ * violation throws and the line rolls back (A7.9).
+ * @param {Run} run @param {string} id @param {string} op
+ */
+function checkItem(run, id, op) {
+  const p = itemLocProblem(run.state, run.content, id)
+    ?? (inContainmentCycle(run.state.items, id) ? { field: 'loc', problem: 'containment cycle' } : null);
+  if (p) throw new Error(`${op}: items.${id}.${p.field}: ${p.problem}`);
+}
+
+/** A finite number, or an internal error naming the operation (A3: no NaN / Infinity). */
+function finite(value, op) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${op}: expected a finite number, got ${String(value)}`);
+  return value;
+}
+
+/**
  * Item evidence whose item is now carried is discovered (A8.8).
  * @param {Run} run
  */
@@ -302,6 +335,7 @@ export function moveEntity(run, id, loc) {
       throw new Error(`move: unknown location "${loc}"`);
     }
     world.moveItem(state, id, loc);
+    checkItem(run, id, 'move');
     if (loc === PLAYER && state.items[id].moved === false) state.items[id].moved = true;
     discoverCarried(run);
   } else if (hasOwn(state.npcs, id)) {
@@ -325,6 +359,7 @@ export function setItem(run, id, patch) {
     }
     st[key] = value;
   }
+  checkItem(run, id, 'setItem');
 }
 
 /** Reveals a hidden item: `hidden = false`, then its `found` reaction (A8.6). */
@@ -395,20 +430,24 @@ export function setFlag(run, name, value = true) {
   else run.state.flags[name] = true;
 }
 
-/** Nerve delta, clamped 0…100 immediately (caps / panic are D6). */
-export function adjustNerve(run, delta) {
-  const n = Math.round(run.state.nerve + Number(delta || 0));
+/** Nerve delta, clamped 0…100 immediately (caps / panic are D6). Non-finite deltas throw. */
+export function adjustNerve(run, delta = 0) {
+  const n = Math.round(run.state.nerve + finite(delta, 'nerve'));
   run.state.nerve = Math.max(0, Math.min(100, n));
 }
 
-/** Money delta in pence, clamped at 0. */
-export function adjustMoney(run, delta) {
-  run.state.money = Math.max(0, Math.trunc(run.state.money + Number(delta || 0)));
+/** Money delta in pence, clamped at 0. Non-finite deltas throw. */
+export function adjustMoney(run, delta = 0) {
+  run.state.money = Math.max(0, Math.trunc(run.state.money + finite(delta, 'money')));
 }
 
-/** Ends the game (A5 `end`): the pipeline skips to D8. */
+/**
+ * Ends the game (A5 `end`): the pipeline skips to D8. An ending already set stands (A7.7
+ * E1: a death reached inside a nested reaction is never overwritten by a later effect).
+ */
 export function endGame(run, id) {
   if (!(run.content.endings ?? []).some((e) => e.id === id)) throw new Error(`unknown ending "${id}"`);
+  if (run.state.ended !== null) return;
   run.state.ended = id;
   run.state.ctx.pending = null;
 }
@@ -437,6 +476,29 @@ export function pictureEvent(run) {
   if (!world.isLit(state, content)) id = content.rules.darkPicture ?? null;
   else if (room?.picture && hasOwn(content.art, room.picture)) id = room.picture;
   return { type: 'picture', id, graphics: state.settings.graphics };
+}
+
+/**
+ * A9.2 O5 for every phase of a turn: when the current room's lit state differs from what the
+ * player was last shown (`run.shown`) without a room change, emit `picture` and the
+ * description (lit) or the darkness text (unlit) — once. Called after the action phase,
+ * after room entry's `onEnter`, after afterAction and after each daemon step; a room
+ * description in between updates `run.shown`, so nothing is announced twice.
+ * @param {Run} run
+ */
+export function syncLight(run) {
+  const { state, content, shown } = run;
+  if (!shown || state.ended !== null) return;
+  const lit = world.isLit(state, content);
+  if (shown.roomId !== state.roomId) {
+    run.shown = { roomId: state.roomId, lit };
+    return;
+  }
+  if (lit === shown.lit) return;
+  emit(run, pictureEvent(run));
+  if (lit) describeRoom(run);
+  else sayMessage(run, 'dark');
+  run.shown = { roomId: state.roomId, lit };
 }
 
 /** `status` event (A9.1). */
@@ -499,7 +561,9 @@ export function describeRoom(run, { brief = false } = {}) {
   const { state, content } = run;
   const roomId = state.roomId;
   const room = content.rooms[roomId];
-  if (!world.isLit(state, content)) {
+  const lit = world.isLit(state, content);
+  run.shown = { roomId, lit };
+  if (!lit) {
     sayMessage(run, 'darkTitle', {}, 'title');
     sayMessage(run, 'dark');
     return;
@@ -536,13 +600,13 @@ export function enterRoom(run, roomId) {
   if (!hasOwn(content.rooms, roomId)) throw new Error(`movePlayer: unknown room "${roomId}"`);
   const brief = state.settings.verbose === false && state.visited.includes(roomId);
   world.movePlayer(state, roomId);
-  run.moved = true;
   emit(run, roomEvent(run));
   emit(run, pictureEvent(run));
   describeRoom(run, { brief });
   const onEnter = content.rooms[roomId].onEnter;
   if (onEnter !== undefined) runReaction(run, onEnter, { phase: 'onEnter', self: roomId });
   world.markVisited(state, roomId);
+  syncLight(run);                       // onEnter may have changed the light (O5)
 }
 
 /* ------------------------------------------------------------------------ *
@@ -596,6 +660,8 @@ function applyObject(run, r, guardChecked) {
   if (r.chance !== undefined && !(rng.next(run.state) < r.chance)) return NOT_FIRED;
   for (const key of REACTION_ORDER) {
     if (!hasOwn(r, key)) continue;
+    // A7.7 E1: once an ending is set (here or in a nested reaction), nothing else applies.
+    if (run.state.ended !== null) break;
     // R4: a hook returning exactly false un-fires the reaction; `then` / `end` are skipped.
     if (key === 'hook') {
       if (callHook(run, r.hook) === false) return NOT_FIRED;
@@ -606,9 +672,9 @@ function applyObject(run, r, guardChecked) {
   return { fired: true, cont: r.continue === true };
 }
 
-/** Evaluates any Reaction form (R1–R7). */
+/** Evaluates any Reaction form (R1–R7). After an ending nothing runs (A7.7 E1). */
 function evalReaction(run, r) {
-  if (r === undefined || r === null) return NOT_FIRED;
+  if (r === undefined || r === null || run.state.ended !== null) return NOT_FIRED;
   if (typeof r === 'string') {
     say(run, r);
     return { fired: true, cont: false };

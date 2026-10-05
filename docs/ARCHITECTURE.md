@@ -41,12 +41,12 @@ typedef or constant in `types.js`. "A7.4" points into this document, "PLAN §2.5
 | `src/engine/world.js` | TT-006 | Pure queries, low-level state moves, condition evaluation | `inventory(state)`, `locationOf(state, id)`, `contentsOf(state, id)`, `isCarried(state, id)`, `roomOf(state, id)`, `isOpen(state, content, id)`, `npcsIn(state, roomId)`, `moveItem(state, id, loc)`, `moveNpc(state, id, loc)`, `movePlayer(state, roomId)` (no `visited`), `markVisited(state, roomId)`, `isLit(state, content, roomId?)`, `visibleItems(state, content)`, `sceneryOf(content, id)`, `scope(state, content, callHook?)` → `{items, npcs, scenery, exits, ids}`, `isVisible` / `isReachable(state, content, id)`, `exitsOf(state, content, roomId?, callHook?)` → `ExitInfo[]`, `evidenceCount(state, content)`, `test(cond, state, content, callHook?)`, `timeString(turn)`; `callHook(hookId, {phase})` |
 | `src/engine/vocab.js` | TT-005 | Engine verb table (A6.1), prepositions, articles, directions | `VERBS`, `PREPOSITIONS`, `ARTICLES`, `buildVocab(content)` |
 | `src/engine/parser.js` | TT-005 | Syntax only (A6.2) | `normaliseInput(line)`, `tokenise(line)`, `splitChain(tokens, vocab?)`, `parseCommand(tokens \| string, vocab)` |
-| `src/engine/resolve.js` | TT-007 | Binding, disambiguation, pronouns, ALL, AGAIN, pending answers (A6.3–A6.7) | `resolve(parsed, state, content, vocab?, callHook?, options?)`, `answerPending(segment, state, content, vocab?, callHook?, options?)`, `repeatLast(state, content, vocab?, callHook?, options?)`, `recordExecuted(state, content, command, vocab?)`, `matchTopic(text, content)`, `parseErrorResult(err)`; `options = {strict}` rethrows (C24) |
+| `src/engine/resolve.js` | TT-007 | Binding, disambiguation, pronouns, ALL, AGAIN, pending answers (A6.3–A6.7) | `resolve(parsed, state, content, vocab?, callHook?, options?)`, `answerPending(segment, state, content, vocab?, callHook?, options?)`, `repeatLast(state, content, vocab?, callHook?, options?)`, `recordExecuted(state, content, command, vocab?)`, `matchTopic(text, content)`, `parseErrorResult(err)`; `options = {strict}` rethrows (C24) — `game.js` always passes `strict: true`, so a throwing hook (e.g. an exit condition evaluated for scope) reaches A7.9 instead of becoming a resolution error |
 | `src/engine/text.js` | TT-008 | Normaliser (A12), interpolation, English helpers | `normalise(s, {strict}?)`, `interpolate(text, values)`, `formatMoney(pence)`, `listJoin(parts, conj?)`, `withArticle(name, article?, mode?)` (`'definite'\|'indefinite'`), `capitalise(s)` |
-| `src/engine/api.js` | TT-008 | `HookApi` factory + Reaction runner (A4.5, A5) and the engine services shared by actions and game (messages, Text, names, room entry / description, status / picture / end events) | `createRun({state, content, vocab?, strict?, messages?})` → `Run`, `createApi(run)` → `HookApi`, `runOf(api)` → `Run`, `react(reaction, api, args?)` → fired, `runReaction(run, reaction, args?)` → `{fired, cont}`, `callHook(run, id, args?)`, `testCond(run, cond)`, `message(run, id, params?)`, `renderText(run, text, self?)`, `say` / `sayMessage` / `emitText` / `emit`, `nameOf(run, id, mode?)`, `nameParams(run, id)`, `describeRoom(run, {brief}?)`, `enterRoom(run, roomId)`, `roomEvent` / `pictureEvent` / `statusEvent` / `endEvent(run)`, `ambientFor(state, content)`, `rankFor(content, score)`, state ops (`moveEntity`, `setItem`, `reveal`, `award`, `addNote`, `addEvidence`, `setVar`, `setFlag`, `adjustMoney`, `adjustNerve`, `endGame`) |
+| `src/engine/api.js` | TT-008 | `HookApi` factory + Reaction runner (A4.5, A5) and the engine services shared by actions and game (messages, Text, names, room entry / description, status / picture / end events) | `createRun({state, content, vocab?, strict?, messages?})` → `Run`, `createApi(run)` → `HookApi`, `runOf(api)` → `Run`, `react(reaction, api, args?)` → fired, `runReaction(run, reaction, args?)` → `{fired, cont}`, `callHook(run, id, args?)`, `testCond(run, cond)`, `message(run, id, params?)`, `renderText(run, text, self?)`, `say` / `sayMessage` / `emitText` / `emit`, `nameOf(run, id, mode?)`, `nameParams(run, id)`, `describeRoom(run, {brief}?)`, `enterRoom(run, roomId)`, `syncLight(run)` (O5), `withCommand(run, cmd, fn)` (A5 `args.cmd`), `roomEvent` / `pictureEvent` / `statusEvent` / `endEvent(run)`, `ambientFor(state, content)`, `rankFor(content, score)`, state ops (`moveEntity`, `setItem`, `reveal`, `award`, `addNote`, `addEvidence`, `setVar`, `setFlag`, `adjustMoney`, `adjustNerve`, `endGame`) |
 | `src/engine/actions/*.js` | TT-008, TT-009 | One module per verb family (`movement`, `observe`, `objects`, `light`, `meta`, `generic`; TT-009: `npc`, `case`), `protect.js` (A8.7), `perform.js` (A7.5 action phase); `actions/index.js` is the registry | `ACTIONS` `{ [verbId]: ActionDef }` (A7.5), `SYSTEM_ACTIONS` `{ [verb]: (cmd, api, sys) }`, `ACTION_MESSAGES`, `performAction(run, cmd, registry)`, `protection(cmd, state, content)`; `ActionDef = {verb, run(cmd, api) → {ok}, dir?(cmd, api), confirm?(cmd, api) → PendingConfirm\|null}` |
-| `src/engine/daemons.js` | TT-010 | Per-turn steps D1–D9 (A7.6) | `runDaemons(run)` |
-| `src/engine/game.js` | TT-008 (+TT-010 wiring) | `createGame`, input processing, chains, UNDO, refresh bundles | `createGame({content, seed?, strict?, actions?})` → `Game` (A2); `DAEMON_STEPS` (D1–D9 in order; D2–D6 are slots TT-010 fills from `daemons.js`) |
+| `src/engine/daemons.js` | TT-010 | Per-turn steps D1–D9 (A7.6), defined here | `DAEMON_STEPS` (`{id, always, run(run, cmd)}` in D1–D9 order; `always` = runs after an ending), `runDaemons(run, cmd?)`, `DAEMON_MESSAGES` (`lightOut`, `panic`), `nerveRules(content)` |
+| `src/engine/game.js` | TT-008 (+TT-010 wiring) | `createGame`, input processing, chains, UNDO, refresh bundles; the transaction boundary of A7.9 | `createGame({content, seed?, strict?, actions?})` → `Game` (A2); re-exports `DAEMON_STEPS` from `daemons.js` |
 | `src/content/**` | TT-016…TT-021 | Data + named hooks (A4) | `content/index.js` default-exports the `ContentBundle` |
 | `src/ui/**` | TT-003, TT-011…TT-014 | Canvas, terminal, audio, boot, host (A10) | — |
 | `tools/**` | various | Node tooling (play, lint, build, smoke) | — |
@@ -462,6 +462,10 @@ Text (`{hook}`), Cond (`{hook}`) and Reactions (`hook:`). Signature
 | `onEnter`, `found`, `readable`, `topic`, `accepts`, `shows`, `talk`, `sells`, `edible`, `drinkable` | those slots | yes | owner id |
 | `afterAction`, `beat`, `daemon`, `schedule`, `case` | pipeline | the current command or null | null / NPC id |
 
+"Inside a command" means everything from the handler step on: hooks triggered by engine
+services a handler uses (room entry's `onEnter`, EXAMINE / READ text, `found`, …) see the
+executing command in `args.cmd`; for ALL / lists it is the per-object command (TT-101).
+
 **`HookApi` surface.**
 
 | Member | Effect / result | Events emitted |
@@ -476,6 +480,12 @@ Text (`{hook}`), Cond (`{hook}`) and Reactions (`hook:`). Signature
 | `move(id, loc)` | item or NPC location; an item reaching the player triggers evidence discovery (A8.8) | discovery output |
 | `movePlayer(roomId)` | full room entry (A8.3 step 7): `room`, `picture`, description, `onEnter` | yes |
 | `setItem(id, patch)` | patch `open`/`locked`/`lit`/`fuel`/`hidden`/`worn`/`moved` (only fields the item has) | lighting change may re-describe (A9.2 O5) |
+
+State operations (`move`, `setItem`, `money`, `nerve`, `setVar`, …) enforce the A3 invariants
+when they mutate — the same predicates `validateSave` uses (V9, V10): an item may only go
+into a `container`, `worn: true` needs `loc === 'player'`, numeric deltas must be finite.
+A violation is an internal error, so the line rolls back (A7.9) and no state that its own
+save would reject is ever committed (TT-101).
 | `setNpc(id, {state})` | NPC state string | — |
 | `reveal(id)` | `hidden = false` + `found` reaction | `found` text |
 | `setFlag(name, value = true)`, `clearFlag(name)` | `false` ≡ clear | — |
@@ -730,6 +740,9 @@ endings → status" is kept; D4 is inserted between schedules and light (A17 C9)
 
 ### A7.7 Endings (PLAN §2.5 endings precedence)
 - **E1** At D8: if `state.ended` is already set (death or wrong man via `end`), that ending stands — death "ends immediately" and beats anything else. Otherwise the first ending in `content.endings` whose `when` holds wins.
+  The first ending set in a turn is final: `end` never overwrites it, and once it is set no
+  further Reaction effect applies — not even the rest of an enclosing reaction whose
+  `movePlayer` triggered a fatal `onEnter` (TT-101). D1, D8, D9 and the `end` event still run.
 - **E2** The Tallyman orders its `when` endings victory → pyrrhic → got-away → fifth-stroke (A14), so an action that achieves victory on turn 300 wins (victory precedes midnight).
 - **E3** On ending: `ended = id`, `ctx.pending = null`; events `status` then `end` (with `text`, `title`, `score`, `rank`, …). Remaining chain commands are discarded with the notice before `end`.
 - **E4** Ended mode accepts only `ENDED_VERBS` (A7.1 step 2). UNDO after a death restores the state before the fatal line.
@@ -746,7 +759,9 @@ endings → status" is kept; D4 is inserted between schedules and light (A17 C9)
 `input()`, `load()`, `undo()` and `restart()` never throw. Any exception inside them (engine
 bug, throwing hook, invalid `setVar`) restores `lineStart` and the previous UNDO snapshot,
 discards the events of that call and returns `[text system engineError]`. With
-`strict: true` the exception is rethrown instead (tests, fuzzing).
+`strict: true` the exception is rethrown instead (tests, fuzzing). The game is the only
+transaction boundary: no inner layer (resolver, Cond evaluation for scope or exits) turns a
+hook exception into an ordinary result.
 
 ---
 
@@ -756,6 +771,7 @@ discards the events of that call and returns `[text system engineError]`. With
 - **Visible**, room lit: items with `loc === roomId` or `roomId ∈ alsoIn`; NPCs with `loc === roomId`; the room's scenery; carried items; recursively the contents of every visible item that is a supporter, an open container or a transparent container. Hidden items (`hidden: true`) are never visible.
 - **Visible**, room unlit: carried items and, recursively, the contents of carried open containers (by touch).
 - **Reachable** = visible and not inside a closed container; handlers refuse unreachable objects with "You can't reach it." (1 turn).
+  One registry wrapper applies this to every physical verb's `dobj` (take, drop, put, open, close, unlock, lock, push, pull, move, turn_on, turn_off, wear, remove, eat, drink, throw, break, tear, cut, oil, use, touch, attack, give, arrest, free) and tool `iobj` (put, unlock, lock, break, tear, cut, oil, use, attack, arrest) at the handler step; an implicit key (`keyId`) must be reachable too. Observation verbs and SHOW need only visibility (TT-101).
 - Items held by NPCs (`loc = npcId`) and items with `loc = null` are never in scope (except BUY, A6.3 M3).
 
 ### A8.2 Light
@@ -811,6 +827,11 @@ Applied at A7.5 step 2 — before any content reaction, so content cannot accide
 | `throw` | refused: `personal` | refused: `critical` | in a `sink` room: lost (`loc = null`) with the room's text; else dropped ("Thrown.") |
 | `eat`, `drink` | refused: `personal` | refused: `critical` | `edible`/`drinkable` reaction then `loc = null`; else "That's plainly inedible." / "You can't drink that." |
 | `break`, `tear`, `cut` (as dobj) | refused: `personal` | refused while carried: `critical` (not yet carried — e.g. TEAR PAGE out of the ledger — content reactions decide) | content reactions / default |
+
+Containers carry their contents' protection: the rules above apply to the `dobj` and to
+everything (transitively) inside or on it, personal before critical, so THROW SATCHEL into
+a sink or GIVE it away is refused while critical handcuffs are inside (an `accepts` entry
+only exempts the given item itself) (TT-101).
 
 Engine default handlers never destroy an item for BREAK / TEAR / CUT; only content reactions can, and lint warns on reactions that `move` a critical item to `null`. The warrant card and wallet are `personal`; money is a balance, never an item that can be
 lost. No exit is ever removed, so no room becomes permanently inaccessible before an ending.
@@ -872,6 +893,7 @@ the host echoing typed input.
 - **O3** The chain notice goes immediately before the terminal event, or last if there is none.
 - **O4** One `status` per completed turn (D9), plus one after HINT, plus one in each refresh bundle. Free commands that change nothing shown in the status bar emit none.
 - **O5** `room` is always followed immediately by `picture`. `picture` is also emitted alone on GRAPHICS ON/OFF, and — followed by the description (lit) or darkness text (unlit) — when the current room's lit state changes without the player moving (TURN ON TORCH in the cellar).
+  This holds in every phase of a turn — action, room entry (`onEnter`), afterAction and each daemon step — measured against what the player was last shown, so each change is announced exactly once (TT-101).
 - **O6** `ambient` is emitted at D7 only when the value differs from the one at the start of that command's turn, and always in refresh bundles.
 - **O7** All strings are output-normalised (A12.1).
 - **O8** Within one action, text precedes its own `sfx` (e.g. "Taken." then `pickup`), except a Reaction's `sfx`/`pause` keys, which come before its `say` (REACTION_ORDER).
@@ -899,7 +921,7 @@ After a refresh of an ended game only UNDO / LOAD / RESTART / IMPORT are accepte
 - **Browser** (`src/ui/storage.js`, TT-012): at boot, probe `localStorage` (`setItem`/`removeItem` of `tallyman.probe`) inside try/catch. Success → keys `tallyman.save.<slot>` (SaveData JSON) and `tallyman.setting.<key>`. Failure or absence (`file://` in some browsers) → in-memory `Map`, `persistent: false`, and one system line per session: "Saving to this browser isn't possible here. Saves last until you close the page - use EXPORT to keep one."
 - Every adapter call is wrapped in try/catch and never throws. `read` returns `null` for an empty slot or unparseable JSON (validation is the engine's job). `write` returns `false` on failure (e.g. quota) after keeping the save in memory.
 - `list()` returns each slot's `summary` for a slot listing ("1: Mill Yard 22:41 SC 35").
-- **Terminal** (`tools/play.js`): `./saves/slot<N>.json`; EXPORT writes `./saves/tallyman-save.json`; IMPORT reads that file (or `--import <file>`).
+- **Terminal** (`tools/play.js`): `./saves/slot<N>.json`; EXPORT writes `./saves/tallyman-save.json`; IMPORT reads that file (or `--import <file>`). A failed write prints the reason, keeps the save in memory for the session (LOAD / IMPORT read it) and play continues.
 
 ### A10.2 Handling engine requests
 
@@ -961,7 +983,7 @@ checks, in order (first failure wins):
 - **V9** Locations: item `loc` ∈ rooms ∪ container items ∪ NPCs ∪ {`'player'`, `null`}; NPC `loc` ∈ rooms ∪ {`null`}; `worn` ⇒ `loc === 'player'`.
 - **V10** No containment cycles: from each item follow `loc` while it names an item; revisiting an item, or more steps than there are items, is a cycle. → "corrupt save: containment cycle at {id}"
 - **V11** `vars` values valid for their `VarDecl`; every `flags` value is `true`.
-- **V12** `ctx`: `it` / `npc` null or existing; `them` existing ids; `lastCommand` null or a `Command` with existing ids; `pending` null or well-formed (`kind ∈ PENDING_KINDS`, string `text`, existing candidates); `ended` null or an existing ending id; `ended !== null ⇒ pending === null`; `settings` two booleans.
+- **V12** `ctx`: `it` / `npc` null or existing; `them` existing ids; `lastCommand` null or a `Command` with existing ids; `pending` null or well-formed (`kind ∈ PENDING_KINDS`, string `text`, existing candidates — for a disambiguation: a parsed command with a known verb, string `verbWord`/`raw`, well-formed noun phrases (exactly one of words / pronoun / all / list), the asked `slot` present in it, ≥ 2 distinct candidates, `index` only into a `list` phrase with `bound[slot]` the ids resolved so far, otherwise `slot` not yet bound); `ended` null or an existing ending id; `ended !== null ⇒ pending === null`; `settings` two booleans.
 - **V13** Atomicity: `validateSave` never mutates its input; `game.load` swaps state only after full success, then clears the UNDO snapshot and returns the refresh bundle. On failure nothing changes.
 
 Error strings are short and human-readable: `corrupt save: {path}: {problem}`, e.g.

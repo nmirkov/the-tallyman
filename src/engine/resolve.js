@@ -43,7 +43,9 @@
 //   `{type:'prompt', kind:'disambig', text: result.pending.text}`.
 //
 // `callHook` is only forwarded to world.scope() for hook-conditioned exits; resolution
-// itself never runs hooks, and a throwing hook there cannot break resolution.
+// itself never runs hooks. A hook that throws there is a content bug: the exception
+// propagates (the game passes `{strict: true}` so it reaches its transaction boundary,
+// A7.9); standalone callers without `strict` get the usual engineError result.
 
 import { MESSAGES, CHAIN_BARRIERS, PLAYER } from './types.js';
 import { ARTICLES, ORDINALS, SELF_WORDS, defaultVocab } from './vocab.js';
@@ -154,14 +156,6 @@ function disambigText(content, candidates) {
  *  Resolution context and scope (M3, A8.1)                                  *
  * ------------------------------------------------------------------------ */
 
-/** Hook calls from scope() (exit conditions only) must never break resolution. */
-function safeHook(callHook) {
-  return (id, args) => {
-    if (typeof callHook !== 'function') return false;
-    try { return callHook(id, args); } catch { return false; }
-  };
-}
-
 /**
  * Per-call context: everything the slot resolvers need.
  * @param {ParsedCommand|Command} cmd
@@ -169,7 +163,7 @@ function safeHook(callHook) {
 function context(cmd, state, content, vocab, callHook) {
   const v = vocab && vocab.verbById ? vocab : defaultVocab();
   const verb = typeof cmd.verb === 'string' && hasOwn(v.verbById, cmd.verb) ? v.verbById[cmd.verb] : null;
-  const sc = scope(state, content, safeHook(callHook));
+  const sc = scope(state, content, typeof callHook === 'function' ? callHook : () => false);
   return { state, content, vocab: v, cmd, verb, sc, lit: isLit(state, content), ctx: isObj(state.ctx) ? state.ctx : {} };
 }
 

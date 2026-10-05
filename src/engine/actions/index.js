@@ -13,6 +13,7 @@ import * as meta from './meta.js';
 import * as generic from './generic.js';
 import * as npc from './npc.js';
 import * as kase from './case.js';
+import { reachGuard } from './common.js';
 
 const FAMILIES = [movement, observe, objects, light, meta, generic, npc, kase];
 
@@ -29,11 +30,12 @@ function merge(key) {
 
 /**
  * World and meta verb handlers. Every handler is wrapped by `npc.selfAware`, so ME /
- * MYSELF as an object gets a sensible answer from verbs that do not expect the player.
+ * MYSELF as an object gets a sensible answer from verbs that do not expect the player,
+ * and physical verbs by `reachGuard` (A8.1: nothing inside a closed container is handled).
  * @type {Readonly<Record<string, import('./common.js').ActionDef>>}
  */
 export const ACTIONS = Object.freeze(Object.fromEntries(
-  Object.entries(merge('actions')).map(([id, def]) => [id, npc.selfAware(def)]),
+  Object.entries(merge('actions')).map(([id, def]) => [id, npc.selfAware(reachGuard(def))]),
 ));
 
 /** Chain-barrier handlers `(cmd, api, sys)` (A7.2 K3). */

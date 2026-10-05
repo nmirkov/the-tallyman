@@ -59,21 +59,39 @@ async function loadContent(path) {
 
 /**
  * The host: renders events as text and services storage / host requests (A10.2).
- * @param {object} opts
+ * Storage never ends the session: a save or export that cannot be written is kept in
+ * memory for this session (as the browser adapter does, A10.1), the reason is printed,
+ * and LOAD / IMPORT read the in-memory copy.
+ * @param {import('../src/engine/types.js').Game} game
+ * @param {{saves: string, verbose?: boolean, importFile?: string|null}} opts
  * @param {(line: string) => void} out
+ * @returns {{render: (events: object[]) => void, readonly quit: boolean}}
  */
-function createHost(game, opts, out) {
+export function createHost(game, opts, out) {
   const settings = { sound: 'on', music: 'on', typewriter: 'on', theme: 'c64' };
   const savesDir = resolve(opts.saves);
   const slotFile = (n) => join(savesDir, `slot${n}.json`);
   const exportFile = join(savesDir, 'tallyman-save.json');
   let quit = false;
 
+  /** file path → save text kept after a failed write (newer than the file, if any). */
+  const memory = new Map();
+
+  /** Writes a save file; returns null on success, else the reason (the save stays in memory). */
   const writeJson = (file, data) => {
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+    const text = `${JSON.stringify(data, null, 2)}\n`;
+    try {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, text);
+      memory.delete(file);
+      return null;
+    } catch (e) {
+      memory.set(file, text);
+      return String(e?.code ?? e?.message ?? e);
+    }
   };
   const readJson = (file) => {
+    if (memory.has(file)) return memory.get(file);
     try {
       return existsSync(file) ? readFileSync(file, 'utf8') : null;
     } catch {
@@ -124,8 +142,12 @@ function createHost(game, opts, out) {
           break;
         case 'storage':
           if (ev.op === 'save') {
-            writeJson(slotFile(ev.slot), ev.data);
-            out(`Saved in slot ${ev.slot}.`);
+            const failed = writeJson(slotFile(ev.slot), ev.data);
+            if (failed === null) out(`Saved in slot ${ev.slot}.`);
+            else {
+              out(`Couldn't write ${slotFile(ev.slot)}: ${failed}.`);
+              out(`Saved in slot ${ev.slot} for this session only. Use EXPORT to keep a copy.`);
+            }
           } else {
             const text = readJson(slotFile(ev.slot));
             if (text === null) out(`Slot ${ev.slot} is empty.`);
@@ -134,8 +156,12 @@ function createHost(game, opts, out) {
           break;
         case 'host':
           if (ev.op === 'export') {
-            writeJson(exportFile, ev.data);
-            out('Save exported as tallyman-save.json.');
+            const failed = writeJson(exportFile, ev.data);
+            if (failed === null) out('Save exported as tallyman-save.json.');
+            else {
+              out(`Couldn't export the save to ${exportFile}: ${failed}.`);
+              out('It is kept for this session only - IMPORT can still read it.');
+            }
           } else if (ev.op === 'import') {
             const text = readJson(opts.importFile ? resolve(opts.importFile) : exportFile);
             if (text === null) out('Import cancelled.');
@@ -176,6 +202,14 @@ async function main() {
   const out = (line) => process.stdout.write(`${line}\n`);
   const host = createHost(game, opts, out);
   host.render(game.start());
+  // One command; a host-side failure is reported and the session goes on.
+  const step = (line) => {
+    try {
+      host.render(game.input(line));
+    } catch (e) {
+      out(`(play: ${e?.message ?? e})`);
+    }
+  };
 
   if (opts.script) {
     const lines = readFileSync(resolve(opts.script), 'utf8').split(/\r?\n/);
@@ -184,7 +218,7 @@ async function main() {
       if (line.trim().startsWith('#')) continue;
       out('');
       out(`> ${line}`);
-      host.render(game.input(line));
+      step(line);
       if (host.quit) break;
     }
     return;
@@ -193,13 +227,15 @@ async function main() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '\n> ' });
   rl.prompt();
   rl.on('line', (line) => {
-    host.render(game.input(line));
+    step(line);
     if (host.quit) rl.close();
     else rl.prompt();
   });
 }
 
-main().catch((e) => {
-  process.stderr.write(`play: ${e.message}\n`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch((e) => {
+    process.stderr.write(`play: ${e.message}\n`);
+    process.exitCode = 1;
+  });
+}

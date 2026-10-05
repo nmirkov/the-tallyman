@@ -2,7 +2,7 @@
 id: TT-101
 title: Fix Codex R1 review findings in the engine
 milestone: BUG
-status: in-progress
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-010]

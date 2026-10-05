@@ -19,7 +19,7 @@ import {
 } from './resolve.js';
 import {
   createRun, emit, emitText, message, say, runReaction, describeRoom, roomEvent, pictureEvent,
-  statusEvent, endEvent, ambientFor,
+  statusEvent, endEvent, ambientFor, withCommand, syncLight,
 } from './api.js';
 import { ACTIONS, SYSTEM_ACTIONS, ACTION_MESSAGES, performAction } from './actions/index.js';
 import { DAEMON_STEPS, DAEMON_MESSAGES, runDaemons } from './daemons.js';
@@ -76,6 +76,7 @@ function finishTurn(run, cmd) {
       runReaction(run, reaction, { phase: 'afterAction', cmd, self: null });
       if (run.state.ended !== null) break;
     }
+    syncLight(run);
   }
   runDaemons(run, cmd);
   if (run.state.ended !== null) emit(run, endEvent(run));
@@ -97,7 +98,10 @@ export function createGame(options = {}) {
   const registry = Object.freeze({ ...ACTIONS, ...(options.actions ?? {}) });
   const vocab = buildVocab(content);
   const originalSeed = seed >>> 0;
-  const resolverOpts = { strict };
+  // The resolver never swallows exceptions here: a throwing hook (e.g. an exit condition
+  // evaluated for scope) reaches contained(), the game's transaction boundary, which rolls
+  // the whole line back — or rethrows in strict mode (A7.9, C24).
+  const resolverOpts = { strict: true };
   const run = createRun({ state: createState(content, originalSeed), content, vocab, strict, messages: { ...ACTION_MESSAGES, ...DAEMON_MESSAGES } });
   const api = run.api;
   /** @type {import('./types.js').State|null} */
@@ -324,12 +328,19 @@ export function createGame(options = {}) {
     return parsed;
   }
 
-  /** Executes a resolved command: barrier (confirmed), confirmation, meta, or a world turn. */
+  /**
+   * Executes a resolved command: barrier (confirmed), confirmation, meta, or a world turn.
+   * Everything after the barrier check runs with `cmd` as the hook context (A5).
+   */
   function execute(cmd, line$) {
     if (isBarrier(cmd.verb)) {
       runBarrier(cmd);
       return STOP;
     }
+    return withCommand(run, cmd, () => executeCommand(cmd, line$));
+  }
+
+  function executeCommand(cmd, line$) {
     const def = registry[cmd.verb];
     if (def?.confirm && !cmd.confirmed) {
       const pending = def.confirm(cmd, api);
@@ -361,6 +372,7 @@ export function createGame(options = {}) {
       roomId: run.state.roomId, lit: isLit(run.state, content), ambient: ambientFor(run.state, content),
       nerve: run.state.nerve,
     };
+    run.shown = { roomId: run.turnStart.roomId, lit: run.turnStart.lit };
     run.panicked = false;
     performAction(run, cmd, registry);
     finishTurn(run, cmd);
