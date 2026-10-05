@@ -35,3 +35,8 @@ All blocking items resolved. Notes and where they are handled:
 | Blind QA must override the generic dispatch template | TT-024 ticket explicitly: no PLAN/STORY/ARCHITECTURE/source pointers |
 | Carry screenshot review through wrapping, paging, phone keyboard | TT-011/TT-023 acceptance criteria |
 | Audio quality is a known limitation of autonomous build | Accepted; `tools/audio-demo.html` for Nenad to audition |
+
+## Code review R1 (M0 + M1, `plan-approved..91da154`)
+
+### Round 1 — 2026-10-06 — CHANGES REQUIRED
+9 blocking: critical items destroyable via container; exit-condition exceptions swallowed; nested endings overwritten; unreachable items manipulable inside closed containers; stale presentation after non-action lighting changes; hooks lose current command; malformed pending commands pass save validation; API mutations can commit unsavable states; terminal save failures crash. → Fix ticket **TT-101**.
