@@ -2,7 +2,7 @@
 id: TT-019
 title: Art style gate: preview tool and 3 representative pictures
 milestone: M3
-status: in-progress
+status: done
 agent: artist
 model: opus
 depends: [TT-003, TT-015]
