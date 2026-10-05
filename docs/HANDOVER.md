@@ -5,13 +5,13 @@
 > the tickets in `tickets/`. Nenad asked for a fully autonomous build — do not ask
 > him questions; decide and log in DECISIONS.md.
 
-## Snapshot — 2026-10-05, during M0
-- HEAD: `12cacb8` (TT-001 committed, verified in clean worktree). Tag `plan-approved` on the plan commit.
-- In flight (background agents, general-purpose type with role files from `.claude/agents/`):
-  TT-002 engine contract (opus), TT-003 screen renderer (opus), TT-004 progress page (sonnet).
-- Next: verify + commit each of TT-002/003/004 separately; review ARCHITECTURE.md
-  against PLAN §2.5/§3.4a (orchestrator approval gate); then M1: TT-005 & TT-006
-  (parallel, both depend on TT-002), TT-015 story bible in parallel; then TT-007 → 008 → 009 → 010; then R1 Codex review.
+## Snapshot — 2026-10-06, during M1
+- HEAD: TT-007 commit (`git log --oneline | head`). Tags: `plan-approved`, `m0`.
+- Done: TT-001…TT-007, TT-013. Tests: 640 green.
+- In flight: TT-008 game loop & core actions (opus), TT-015 story bible (opus).
+- Next: TT-009 → TT-010 → R1 Codex review (M0+M1 diff `m0~` … actually `plan-approved..HEAD`).
+  After TT-015: TT-019 art style gate (needs full ticket spec). M2 UI (TT-011) after R1.
+- Pending small items: none.
 
 ## How the orchestrator works
 1. Dispatch: `Agent(subagent_type: general-purpose, model: <ticket model>)`, prompt =
