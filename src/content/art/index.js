@@ -3,8 +3,13 @@
 // ending `art` ids refer to these keys. Style rules for new pictures: tickets/TT-019.
 import { townArt } from './town.js';
 import { millArt } from './mill.js';
+import { canalArt } from './canal.js';
+import { moorArt } from './moor.js';
+import { asylumArt } from './asylum.js';
+import { beneathArt } from './beneath.js';
+import { screensArt } from './screens.js';
 
-const ZONE_ART = [townArt, millArt];
+const ZONE_ART = [townArt, canalArt, moorArt, millArt, asylumArt, beneathArt, screensArt];
 
 /**
  * Merge per-zone art tables into one registry; a duplicate id is a content bug.
