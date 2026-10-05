@@ -150,6 +150,8 @@ export const PREPOSITIONS = deepFreeze({
 export const ARTICLES = deepFreeze(['the', 'a', 'an', 'some', 'my', 'please']);
 /** Pronoun words (A6.4). */
 export const PRONOUN_WORDS = deepFreeze(['it', 'them', 'him', 'her']);
+/** Self-reference words (TT-009): a noun phrase of only these binds to the player. */
+export const SELF_WORDS = deepFreeze(['me', 'myself', 'self', 'yourself']);
 /** Quantifier words (A6.5). */
 export const ALL_WORDS = deepFreeze(['all', 'everything']);
 export const EXCEPT_WORDS = deepFreeze(['except', 'but']);
@@ -298,7 +300,7 @@ export function buildVocab(content) {
   const words = new Set();
   const add = (s) => { if (typeof s === 'string') for (const wd of wordsOf(s)) words.add(wd); };
 
-  for (const list of [Object.keys(DIRECTION_WORDS), ARTICLES, PRONOUN_WORDS, ALL_WORDS, EXCEPT_WORDS,
+  for (const list of [Object.keys(DIRECTION_WORDS), ARTICLES, PRONOUN_WORDS, SELF_WORDS, ALL_WORDS, EXCEPT_WORDS,
     CHAIN_WORDS, Object.keys(ORDINALS), ['and', 'one'], ...Object.values(PREPOSITIONS), ...Object.values(HOST_SETTINGS)]) {
     for (const s of list) add(s);
   }

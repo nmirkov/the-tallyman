@@ -233,16 +233,17 @@ function lookups(content) {
   return { rooms, items, npcs, isRef };
 }
 
-/** A resolved Command (A3.3) with existing ids. Unknown extra keys are tolerated. */
+/** A resolved Command (A3.3) with existing ids ('player' = self-reference, TT-009). Unknown extra keys are tolerated. */
 function checkCommand(cmd, path, L, content) {
   if (!isPlainObject(cmd)) corrupt(path, 'expected an object');
   for (const k of ['verb', 'verbWord', 'raw']) if (typeof cmd[k] !== 'string') corrupt(`${path}.${k}`, 'expected a string');
+  const isObjRef = (id) => id === PLAYER || L.isRef(id);
   if (has(cmd, 'dobj')) {
     const d = cmd.dobj;
     if (Array.isArray(d)) d.forEach((id, i) => { if (!L.isRef(id)) corrupt(`${path}.dobj[${i}]`, `unknown id "${id}"`); });
-    else if (!L.isRef(d)) corrupt(`${path}.dobj`, `unknown id "${d}"`);
+    else if (!isObjRef(d)) corrupt(`${path}.dobj`, `unknown id "${d}"`);
   }
-  if (has(cmd, 'iobj') && !L.isRef(cmd.iobj)) corrupt(`${path}.iobj`, `unknown id "${cmd.iobj}"`);
+  if (has(cmd, 'iobj') && !isObjRef(cmd.iobj)) corrupt(`${path}.iobj`, `unknown id "${cmd.iobj}"`);
   if (has(cmd, 'dir') && !DIRECTIONS.includes(cmd.dir)) corrupt(`${path}.dir`, `unknown direction "${cmd.dir}"`);
   for (const k of ['prep', 'topicText', 'arg']) if (has(cmd, k) && typeof cmd[k] !== 'string') corrupt(`${path}.${k}`, 'expected a string');
   if (has(cmd, 'topic') && cmd.topic !== null && !(typeof cmd.topic === 'string' && (has(content.topics, cmd.topic) || L.isRef(cmd.topic)))) {

@@ -2,7 +2,7 @@
 id: TT-009
 title: NPC conversation, evidence, notes, accusation and adaptive hints
 milestone: M1
-status: todo
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-008]
@@ -19,8 +19,13 @@ Implement the detective layer generically (data-driven), per PLAN §2.5 and ARCH
 - Tests on mini-world (extend fixture with 2 NPCs, evidence, hints): every branch.
 
 ## File allow-list
-`src/engine/actions/npc.js`, `src/engine/actions/case.js`, `src/engine/actions/index.js` (registration only), `tests/unit/actions-npc.test.js`, `tests/unit/actions-case.test.js`, `tests/fixtures/*` (additive)
+`src/engine/actions/npc.js`, `src/engine/actions/case.js`, `src/engine/actions/index.js`, `src/engine/actions/placeholder.js`, `src/engine/vocab.js` + `src/engine/resolve.js` (self-reference only), `tests/unit/actions-npc.test.js`, `tests/unit/actions-case.test.js`, `tests/fixtures/*` (additive)
 
 ## Acceptance criteria
-- [ ] All §2.5 ACCUSE rules covered by tests with the fixture.
-- [ ] `npm run check` green.
+- [x] All §2.5 ACCUSE rules covered by tests with the fixture.
+- [x] `npm run check` green.
+
+## Orchestrator notes
+- Read `tickets/TT-008-core-actions/implementation.md` first (registry, `actions/placeholder.js` to replace, `ActionDef.confirm` for free confirmation prompts, HookApi).
+- Add self-reference: `ME`, `MYSELF`, `SELF`, `YOURSELF` → the player (EXAMINE ME gives a content-overridable description, default "As good as can be expected, given the night."; also usable as SHOW CARD TO ME etc. harmlessly). Small vocab.js/resolve.js edits allowed for this.
+- NPCs named characters: honour `proper: true` (no article).

@@ -46,7 +46,7 @@
 // itself never runs hooks, and a throwing hook there cannot break resolution.
 
 import { MESSAGES, CHAIN_BARRIERS, PLAYER } from './types.js';
-import { ARTICLES, ORDINALS, defaultVocab } from './vocab.js';
+import { ARTICLES, ORDINALS, SELF_WORDS, defaultVocab } from './vocab.js';
 import { tokenise, parseCommand } from './parser.js';
 import { scope, isVisible, isCarried, isLit, sceneryOf } from './world.js';
 
@@ -302,6 +302,13 @@ function simpleIds(rc, np, ids) {
   return best.length === 1 ? { ids: best } : { ambiguous: best };
 }
 
+/** ME / MYSELF / SELF / YOURSELF alone → the player (TT-009); always in scope, even in the dark. */
+function isSelf(np) {
+  if (typeof np.pronoun === 'string') return false;
+  const words = phraseWords(np);
+  return words.length > 0 && words.every((w) => SELF_WORDS.includes(w));
+}
+
 /** ALL expansion (A6.5), before EXCEPT. */
 function expandAll(rc, out) {
   const { state, content, cmd, sc } = rc;
@@ -363,6 +370,7 @@ function resolveSlot(rc, slot, np, out, start = 0, prefix = []) {
     return { value: unique.length === 1 ? unique[0] : unique };
   }
 
+  if (isSelf(np)) return { value: PLAYER };
   const r = simpleIds(rc, np, ids);
   if (r.error || r.ambiguous) return r;
   if (r.ids.length > 1 && !multi) return { error: fail('oneAtATime') };
@@ -566,7 +574,7 @@ export function repeatLast(state, content, vocab, callHook, options) {
     if (!validWorld(state, content)) return fail('againNothing');
     const rc = context(last, state, content, vocab, callHook);
     const sold = last.verb === 'buy' ? soldHere(rc) : new Set();
-    const present = (id) => typeof id === 'string' && (isVisible(state, content, id) || sold.has(id));
+    const present = (id) => id === PLAYER || (typeof id === 'string' && (isVisible(state, content, id) || sold.has(id)));
     const dobj = last.dobj === undefined ? [] : [].concat(last.dobj);
     if (!dobj.every(present)) return notHere(rc);
     if (last.iobj !== undefined && !present(last.iobj)) return notHere(rc);

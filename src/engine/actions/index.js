@@ -11,11 +11,10 @@ import * as objects from './objects.js';
 import * as light from './light.js';
 import * as meta from './meta.js';
 import * as generic from './generic.js';
-// TT-009 slot: replace `placeholder` with `npc.js` (TALK / ASK / TELL / SHOW / GIVE / BUY)
-// and `case.js` (ACCUSE / NOTES / HINT) — registration only.
-import * as placeholder from './placeholder.js';
+import * as npc from './npc.js';
+import * as kase from './case.js';
 
-const FAMILIES = [movement, observe, objects, light, meta, generic, placeholder];
+const FAMILIES = [movement, observe, objects, light, meta, generic, npc, kase];
 
 function merge(key) {
   const out = {};
@@ -28,8 +27,14 @@ function merge(key) {
   return Object.freeze(out);
 }
 
-/** World and meta verb handlers. @type {Readonly<Record<string, import('./common.js').ActionDef>>} */
-export const ACTIONS = merge('actions');
+/**
+ * World and meta verb handlers. Every handler is wrapped by `npc.selfAware`, so ME /
+ * MYSELF as an object gets a sensible answer from verbs that do not expect the player.
+ * @type {Readonly<Record<string, import('./common.js').ActionDef>>}
+ */
+export const ACTIONS = Object.freeze(Object.fromEntries(
+  Object.entries(merge('actions')).map(([id, def]) => [id, npc.selfAware(def)]),
+));
 
 /** Chain-barrier handlers `(cmd, api, sys)` (A7.2 K3). */
 export const SYSTEM_ACTIONS = meta.system;

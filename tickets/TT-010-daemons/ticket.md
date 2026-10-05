@@ -2,7 +2,7 @@
 id: TT-010
 title: Daemons — clock, beats, schedules, nerve/panic, endings precedence, scoring
 milestone: M1
-status: todo
+status: in-progress
 agent: engine-dev
 model: opus
 depends: [TT-009]
