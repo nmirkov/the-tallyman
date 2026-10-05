@@ -2,7 +2,7 @@
 id: TT-008
 title: Game loop, core actions and terminal player
 milestone: M1
-status: todo
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-007]
@@ -20,9 +20,16 @@ A playable engine on the mini world: `createGame()` per ARCHITECTURE.md with the
 - Tests: `tests/unit/actions-*.test.js` per family + `tests/unit/game.test.js` (chains, barriers incl. `LOAD 1 THEN NORTH`, UNDO incl. mid-chain, RESTART, refresh bundles incl. pending prompt and ended game, never throws).
 
 ## File allow-list
-`src/engine/game.js`, `src/engine/api.js` (HookApi + Reaction runner, C27), `src/engine/text.js`, `src/engine/actions/*`, `tools/play.js`, `tests/unit/actions-*.test.js`, `tests/unit/game.test.js`, `tests/fixtures/*` (additive)
+`docs/ARCHITECTURE.md` (A1 table only), `src/engine/resolve.js` (strict rethrow only), `src/engine/game.js`, `src/engine/api.js` (HookApi + Reaction runner, C27), `src/engine/text.js`, `src/engine/actions/*`, `tools/play.js`, `tests/unit/actions-*.test.js`, `tests/unit/game.test.js`, `tests/fixtures/*` (additive)
 
 ## Acceptance criteria
 - [ ] `npm run play -- --content tests/fixtures/mini-world.js --script <file>` produces a sensible transcript (include one in implementation.md).
 - [ ] Every verb in vocab.js either has an action or a deliberate generic response (test enumerates vocab).
 - [ ] `npm run check` green.
+
+## Orchestrator notes (from TT-005/006/007 hand-backs)
+- Read `tickets/TT-00{5,6,7}-*/implementation.md` first: vocab shape, world signatures `(state, content, …)`, `scope()` shape, `callHook(id,{phase})` requirement, resolver interface (`resolve`, `answerPending`, `repeatLast`, `recordExecuted`).
+- `movePlayer` does not mark visited — call `markVisited` after `onEnter`.
+- Bare ENTER/EXIT keep their verb → map to go in/out; `climb up/down` arrives as `{verb:'climb', dir}`.
+- Strict mode (C24): the resolver currently catches its own exceptions and returns `engineError`; in strict mode make it rethrow (pass a `strict` option through, small edit to resolve.js allowed).
+- Update ARCHITECTURE.md A1 table with the real exported signatures of parser/resolve/world/game/api (allowed edit, A1 only).

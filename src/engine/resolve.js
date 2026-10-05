@@ -15,6 +15,8 @@
 //   placeholders. `text` (a Text) is present only when the verb's own `notHere` replaces
 //   MESSAGES.notHere (ACCUSE) — say `text` instead of the message then.
 //
+//   (Every entry point also takes a trailing `options` — `{strict: true}` rethrows
+//   internal exceptions instead of returning engineError, A7.9 / C24.)
 //   resolve(parsed, state, content, vocab?, callHook?)            → Result
 //     `parsed` is parseCommand's output. A ParseError is mapped to its message id
 //     (unknownWord {word}, noVerb, missingNoun {verbWord}, noPattern, empty), and
@@ -424,11 +426,15 @@ function buildCommand(rc, out) {
   return cmd;
 }
 
-/** Wraps an exported entry point: bad arguments become errors, never exceptions. */
-function guarded(fn) {
+/**
+ * Wraps an exported entry point: bad arguments become errors, never exceptions — unless
+ * `options.strict` (A7.9, C24), when the exception is rethrown for tests.
+ */
+function guarded(fn, options) {
   try {
     return fn();
   } catch (e) {
+    if (options && options.strict === true) throw e;
     return fail('engineError', { error: String(e && e.message ? e.message : e) });
   }
 }
@@ -456,17 +462,18 @@ export function parseErrorResult(err) {
  * @param {ContentBundle} content
  * @param {Vocab} [vocab]  Merged vocabulary (buildVocab(content)); engine-only by default.
  * @param {(hookId: string, args: object) => unknown} [callHook]
+ * @param {{strict?: boolean}} [options]  strict: rethrow internal errors (C24).
  * @returns {Result}
  */
-export function resolve(parsed, state, content, vocab, callHook) {
+export function resolve(parsed, state, content, vocab, callHook, options) {
   return guarded(() => {
     if (!isObj(parsed)) return fail('noPattern');
     if (typeof parsed.error === 'string') return parseErrorResult(parsed);
     if (typeof parsed.verb !== 'string') return fail('noPattern');
-    if (parsed.verb === 'again') return repeatLast(state, content, vocab, callHook);
+    if (parsed.verb === 'again') return repeatLast(state, content, vocab, callHook, options);
     if (!validWorld(state, content)) return fail('noPattern');
     return bindFrom(context(parsed, state, content, vocab, callHook), {}, null);
-  });
+  }, options);
 }
 
 /** Tokens of an answer segment (array from splitChain, or a string). */
@@ -483,8 +490,9 @@ function answerTokens(segment) {
  * @param {ContentBundle} content
  * @param {Vocab} [vocab]
  * @param {(hookId: string, args: object) => unknown} [callHook]
+ * @param {{strict?: boolean}} [options]
  */
-export function answerPending(segment, state, content, vocab, callHook) {
+export function answerPending(segment, state, content, vocab, callHook, options) {
   return guarded(() => {
     const pending = isObj(state) && isObj(state.ctx) && isObj(state.ctx.pending) ? state.ctx.pending : null;
     if (!pending) return { notAnswer: true };
@@ -537,7 +545,7 @@ export function answerPending(segment, state, content, vocab, callHook) {
       bound[slot] = chosen;
     }
     return bindFrom(context(pending.command, state, content, v, callHook), bound, resume);
-  });
+  }, options);
 }
 
 /**
@@ -548,9 +556,10 @@ export function answerPending(segment, state, content, vocab, callHook) {
  * @param {ContentBundle} content
  * @param {Vocab} [vocab]
  * @param {(hookId: string, args: object) => unknown} [callHook]
+ * @param {{strict?: boolean}} [options]
  * @returns {Result}
  */
-export function repeatLast(state, content, vocab, callHook) {
+export function repeatLast(state, content, vocab, callHook, options) {
   return guarded(() => {
     const last = isObj(state) && isObj(state.ctx) && isObj(state.ctx.lastCommand) ? state.ctx.lastCommand : null;
     if (!last) return fail('againNothing');
@@ -564,7 +573,7 @@ export function repeatLast(state, content, vocab, callHook) {
     const command = clone(last);
     delete command.confirmed;
     return { ok: true, command };
-  });
+  }, options);
 }
 
 /**
