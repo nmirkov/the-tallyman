@@ -2,7 +2,7 @@
 id: TT-015
 title: Write the complete story bible and reference walkthrough (docs/STORY.md)
 milestone: M3
-status: in-progress
+status: done
 agent: writer
 model: opus
 depends: [TT-002]
