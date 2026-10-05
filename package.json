@@ -13,7 +13,8 @@
     "check": "npm run lint:content && npm run test && npm run build",
     "start": "node tools/serve.js",
     "play": "node tools/play.js",
-    "progress": "node tools/progress.js"
+    "progress": "node tools/progress.js",
+    "audio:audit": "node tools/audio-audit.js"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

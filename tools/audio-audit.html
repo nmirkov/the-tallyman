@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Audit</title>
+<!--
+  TT-013 audition gate. Renders every SFX, the first 8 s of every tune, the full endings, every
+  ambience and reference tones through OfflineAudioContext (same chain and bus levels as the game)
+  and measures them. Driven headlessly by `npm run audio:audit` (tools/audio-audit.js), which loads
+  this page with ?report=1 and receives the JSON by POST. Open it by hand via `npm start` to see
+  the table in a browser.
+-->
+<style>
+  :root { color-scheme: dark; --bg: #1c1a3a; --fg: #c8c4ff; --ok: #7fdc7f; --bad: #ff7b7b; --warn: #ffd27b; }
+  body { margin: 0; padding: 24px clamp(16px, 3vw, 48px); background: var(--bg); color: var(--fg); font: 14px/1.4 ui-monospace, monospace; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 4px 10px; border-bottom: 1px solid #3a3670; text-align: right; }
+  th:first-child, td:first-child, td:nth-child(2) { text-align: left; }
+  .pass { color: var(--ok); } .fail { color: var(--bad); } .warn { color: var(--warn); }
+</style>
+</head>
+<body>
+<h1>Audio audition gate</h1>
+<p id="status">Rendering...</p>
+<table id="results"><thead><tr>
+  <th>kind</th><th>id</th><th>declared s</th><th>measured s</th><th>RMS</th><th>peak</th><th>pitch Hz</th><th>result</th><th>notes</th>
+</tr></thead><tbody></tbody></table>
+<pre id="json" hidden></pre>
+<script type="module">
+import { createChain, playHit } from '../src/ui/audio/synth.js';
+import { SFX, playSfx } from '../src/ui/audio/sfx.js';
+import { compileTune, eventsInWindow, scheduleTune, tuneSeconds } from '../src/ui/audio/music.js';
+import { TUNES, INSTRUMENTS } from '../src/ui/audio/tunes.js';
+import { startAmbience } from '../src/ui/audio/ambience.js';
+import { SFX_IDS, TUNE_IDS, AMBIENT_IDS } from '../src/ui/audio/ids.js';
+import { LEVELS } from '../src/ui/audio/index.js';
+import { FRAME_SECONDS, noteFreq, parseNote } from '../src/ui/audio/notes.js';
+
+const RATE = 44100;
+const RMS_MIN = 0.005;
+const PEAK_MAX = 0.99;
+const HEADROOM = 0.85; // above this the safety limiter is shaping the signal: warn, don't fail
+const DUR_TOL = 0.1;
+const PITCH_TOL = 0.02;
+const TUNE_WINDOW = 8;
+
+async function render(seconds, schedule) {
+  const ctx = new OfflineAudioContext(1, Math.ceil(seconds * RATE), RATE);
+  const chain = createChain(ctx);
+  chain.master.gain.value = LEVELS.master;
+  chain.music.gain.value = LEVELS.music;
+  chain.sfx.gain.value = LEVELS.sfx;
+  chain.ambience.gain.value = LEVELS.ambience;
+  schedule(ctx, chain);
+  const buf = await ctx.startRendering();
+  return buf.getChannelData(0);
+}
+
+function measure(x) {
+  let peak = 0;
+  for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
+  // Audible end: last sample above -40 dB re the item's own peak (and above an absolute floor).
+  const thr = Math.max(0.0015, peak * 0.01);
+  let last = -1;
+  for (let i = x.length - 1; i >= 0; i--) if (Math.abs(x[i]) > thr) { last = i; break; }
+  const end = (last + 1) / RATE;
+  let sum = 0;
+  const n = Math.max(1, last + 1);
+  for (let i = 0; i < n; i++) sum += x[i] * x[i];
+  return { peak, end, rms: Math.sqrt(sum / n) };
+}
+
+/** Frequency by counting rising zero crossings (linear interpolation) over [t0, t1). */
+function zeroCrossHz(x, t0, t1) {
+  const a = Math.floor(t0 * RATE); const b = Math.floor(t1 * RATE);
+  let first = null; let lastX = null; let count = 0;
+  for (let i = a + 1; i < b; i++) {
+    if (x[i - 1] < 0 && x[i] >= 0) {
+      const t = (i - 1 + (-x[i - 1]) / (x[i] - x[i - 1])) / RATE;
+      if (first === null) first = t; else count++;
+      lastX = t;
+    }
+  }
+  return count > 0 ? count / (lastX - first) : 0;
+}
+
+/** Dominant frequency by FFT peak (Hann window, parabolic interpolation) - a cross-check. */
+function fftHz(x, t0) {
+  const N = 32768;
+  const re = new Float64Array(N); const im = new Float64Array(N);
+  const s = Math.floor(t0 * RATE);
+  for (let i = 0; i < N; i++) re[i] = (x[s + i] || 0) * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1)));
+  for (let i = 1, j = 0; i < N; i++) {
+    let bit = N >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= N; len <<= 1) {
+    const ang = (-2 * Math.PI) / len;
+    for (let i = 0; i < N; i += len) {
+      for (let k = 0; k < len / 2; k++) {
+        const wr = Math.cos(ang * k); const wi = Math.sin(ang * k);
+        const ur = re[i + k]; const ui = im[i + k];
+        const vr = re[i + k + len / 2] * wr - im[i + k + len / 2] * wi;
+        const vi = re[i + k + len / 2] * wi + im[i + k + len / 2] * wr;
+        re[i + k] = ur + vr; im[i + k] = ui + vi;
+        re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi;
+      }
+    }
+  }
+  const mag = (k) => Math.hypot(re[k], im[k]);
+  let best = 1;
+  for (let k = 2; k < N / 2; k++) if (mag(k) > mag(best)) best = k;
+  const [l, c, r] = [mag(best - 1), mag(best), mag(best + 1)];
+  const off = (l - r) / (2 * (l - 2 * c + r));
+  return ((best + off) * RATE) / N;
+}
+
+function verdict(row) {
+  const fails = [];
+  const warns = [];
+  if (!(row.rms > RMS_MIN)) fails.push(`silent (RMS ${row.rms.toFixed(4)} <= ${RMS_MIN})`);
+  if (!(row.peak < PEAK_MAX)) fails.push(`clipping (peak ${row.peak.toFixed(3)})`);
+  else if (row.peak > HEADROOM) warns.push('limiter engaged');
+  if (row.declared != null && Math.abs(row.measured - row.declared) > row.declared * DUR_TOL) {
+    fails.push(`duration ${row.measured.toFixed(3)} s vs ${row.declared} s`);
+  }
+  if (row.minEnd != null && row.measured < row.minEnd) fails.push(`stops early at ${row.measured.toFixed(2)} s`);
+  if (row.expectHz != null) {
+    for (const [name, hz] of [['zero-cross', row.hz], ['FFT', row.fft]]) {
+      if (name === 'zero-cross' && row.fftOnly) continue;
+      if (Math.abs(hz - row.expectHz) > row.expectHz * PITCH_TOL) fails.push(`${name} pitch ${hz.toFixed(2)} Hz vs ${row.expectHz.toFixed(2)}`);
+    }
+  }
+  return { pass: fails.length === 0, notes: [...fails, ...warns].join('; ') };
+}
+
+const round = (v, d = 3) => (v == null ? null : Number(v.toFixed(d)));
+
+async function item(kind, id, seconds, schedule, extra = {}) {
+  const x = await render(seconds, schedule);
+  const m = measure(x);
+  const row = { kind, id, declared: extra.declared ?? null, measured: m.end, rms: m.rms, peak: m.peak, minEnd: extra.minEnd ?? null, fftOnly: !!extra.fftOnly };
+  if (extra.expectHz) {
+    row.expectHz = extra.expectHz;
+    row.hz = zeroCrossHz(x, 0.2, 0.9);
+    row.fft = fftHz(x, 0.15);
+  }
+  const v = verdict(row);
+  return {
+    kind, id, declared: row.declared, measured: round(m.end), rms: round(m.rms, 4), peak: round(m.peak),
+    hz: round(row.hz, 2), fft: round(row.fft, 2), expectHz: round(row.expectHz, 2), pass: v.pass,
+    notes: row.fftOnly ? [v.notes, 'pitch by FFT only: a narrow PWM pulse rings across zero'].filter(Boolean).join('; ') : v.notes,
+  };
+}
+
+/** Data-declared end of a tune window: last event start + gate + release (incl. layers). */
+function tuneDeclaredEnd(tune, seconds) {
+  const c = compileTune(tune, INSTRUMENTS);
+  let end = 0;
+  for (const e of eventsInWindow(c, 0, 0, seconds)) {
+    const gate = Math.max(e.len * c.rowSec - FRAME_SECONDS, FRAME_SECONDS);
+    let inst = INSTRUMENTS[e.inst]; let r = 0;
+    while (inst) { r = Math.max(r, inst.r ?? 0.02); inst = INSTRUMENTS[inst.also]; }
+    end = Math.max(end, e.time + gate + r);
+  }
+  return end;
+}
+
+async function run() {
+  const rows = [];
+  const add = (r) => { rows.push(r); paint(r); };
+
+  add(await item('ref', 'A-4 pulse 50%', 1.2, (ctx, ch) => playHit(ctx, ch.sfx, 0.05, { midi: parseNote('A-4'), len: 1, inst: { wave: 'pulse', duty: 0.5, a: 0.005, d: 0.1, s: 1, r: 0.05, vol: 0.3 } }), { expectHz: 440 }));
+  add(await item('ref', 'C-4 triangle', 1.2, (ctx, ch) => playHit(ctx, ch.sfx, 0.05, { midi: parseNote('C-4'), len: 1, inst: { wave: 'triangle', a: 0.005, d: 0.1, s: 1, r: 0.05, vol: 0.3 } }), { expectHz: noteFreq('C-4') }));
+  add(await item('ref', 'A-3 lead (PWM)', 1.2, (ctx, ch) => playHit(ctx, ch.sfx, 0.05, { midi: parseNote('A-3'), len: 1, inst: { ...INSTRUMENTS.lead, vib: undefined } }), { expectHz: 220, fftOnly: true }));
+
+  for (const id of SFX_IDS) {
+    const def = SFX[id];
+    add(await item('sfx', id, def.dur * 1.3 + 0.3, (ctx, ch) => playSfx(ctx, ch.sfx, def, 0), { declared: def.dur }));
+  }
+  for (const id of TUNE_IDS) {
+    const tune = TUNES[id];
+    const declared = round(tuneDeclaredEnd(tune, TUNE_WINDOW));
+    add(await item('tune', `${id} (first ${TUNE_WINDOW} s)`, declared * 1.15 + 0.5, (ctx, ch) => scheduleTune(ctx, ch.music, tune, 0, TUNE_WINDOW), { declared }));
+    if (!tune.loop) {
+      const full = tuneSeconds(compileTune(tune, INSTRUMENTS));
+      const end = round(tuneDeclaredEnd(tune, full));
+      add(await item('tune', `${id} (full)`, end * 1.15 + 0.5, (ctx, ch) => scheduleTune(ctx, ch.music, tune, 0, full), { declared: end }));
+    }
+  }
+  for (const id of AMBIENT_IDS) {
+    if (id === 'none') continue;
+    add(await item('ambience', id, 6, (ctx, ch) => startAmbience(ctx, ch.ambience, id, 0, 0).tick(0, 6), { minEnd: 5.4 }));
+  }
+  // Worst case the game can produce: title music + thunder + sting over rain.
+  add(await item('mix', 'title+rain+thunder+sting', 8, (ctx, ch) => {
+    scheduleTune(ctx, ch.music, TUNES.title, 0, 8);
+    startAmbience(ctx, ch.ambience, 'rain', 0, 0).tick(0, 8);
+    playSfx(ctx, ch.sfx, SFX.thunder, 2.0);
+    playSfx(ctx, ch.sfx, SFX.sting, 2.1);
+  }, { minEnd: 7.2 }));
+  return rows;
+}
+
+function paint(r) {
+  const tr = document.createElement('tr');
+  const cells = [r.kind, r.id, r.declared ?? '', r.measured, r.rms, r.peak, r.hz != null ? `${r.hz} / ${r.fft}` : '', r.pass ? 'PASS' : 'FAIL', r.notes];
+  for (const c of cells) { const td = document.createElement('td'); td.textContent = c; tr.append(td); }
+  tr.children[7].className = r.pass ? 'pass' : 'fail';
+  if (r.notes && r.pass) tr.children[8].className = 'warn';
+  document.querySelector('#results tbody').append(tr);
+}
+
+const report = new URLSearchParams(location.search).has('report');
+let payload;
+try {
+  const rows = await run();
+  const failed = rows.filter((r) => !r.pass).length;
+  payload = { ok: failed === 0, failed, rows, userAgent: navigator.userAgent, rate: RATE };
+  document.getElementById('status').textContent = failed ? `${failed} item(s) FAILED` : `All ${rows.length} items passed.`;
+} catch (e) {
+  payload = { ok: false, error: String(e && e.stack || e), rows: [] };
+  document.getElementById('status').textContent = `Error: ${payload.error}`;
+}
+const pre = document.getElementById('json');
+pre.textContent = JSON.stringify(payload);
+document.body.dataset.done = '1';
+if (report) await fetch('/__audit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+</script>
+</body>
+</html>

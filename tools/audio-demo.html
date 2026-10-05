@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tallyman Audio Demo</title>
+<!--
+  TT-013 dev page: audition every SFX, tune and ambience through the real facade
+  (src/ui/audio/index.js). Serve with `npm start`, open /tools/audio-demo.html.
+  The first click anywhere unlocks the AudioContext (autoplay policy), as the title screen's
+  "PRESS ANY KEY" does in the game. Keys: M mute, F2 mute, S stop music.
+-->
+<style>
+  :root { color-scheme: dark; --bg: #40318d; --panel: #352879; --fg: #a59fe6; --hi: #ffffff; --on: #9ae29b; --edge: #7869c4; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px clamp(16px, 3vw, 48px); background: var(--bg); color: var(--fg);
+    font: 15px/1.4 ui-monospace, 'Cascadia Mono', Menlo, monospace; }
+  h1 { color: var(--hi); font-size: 20px; letter-spacing: 0.08em; margin: 0 0 4px; }
+  h2 { color: var(--hi); font-size: 14px; letter-spacing: 0.1em; margin: 24px 0 8px; text-transform: uppercase; }
+  p { margin: 4px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  button { font: inherit; color: var(--hi); background: var(--panel); border: 2px solid var(--edge); padding: 10px 8px;
+    text-transform: uppercase; cursor: pointer; text-align: left; }
+  button:hover, button:focus-visible { background: var(--edge); outline: none; }
+  button.on { border-color: var(--on); color: var(--on); }
+  button small { display: block; color: var(--fg); text-transform: none; font-size: 12px; }
+  #state { color: var(--hi); }
+</style>
+</head>
+<body>
+<h1>THE TALLYMAN - AUDIO</h1>
+<p>Click anything to start audio. <span id="state">audio locked</span></p>
+
+<h2>Controls</h2>
+<div class="grid" id="controls"></div>
+<h2>Music</h2>
+<div class="grid" id="music"></div>
+<h2>Ambience (1 s crossfade)</h2>
+<div class="grid" id="ambience"></div>
+<h2>Sound effects</h2>
+<div class="grid" id="sfx"></div>
+
+<script type="module">
+import { createAudio } from '../src/ui/audio/index.js';
+import { SFX_IDS, TUNE_IDS, AMBIENT_IDS } from '../src/ui/audio/ids.js';
+import { SFX } from '../src/ui/audio/sfx.js';
+import { TUNES } from '../src/ui/audio/tunes.js';
+import { compileTune, tuneSeconds } from '../src/ui/audio/music.js';
+
+const audio = createAudio();
+window.audio = audio; // poke it from the console
+const $ = (id) => document.getElementById(id);
+const buttons = [];
+
+function button(parent, label, sub, onClick, isOn) {
+  const b = document.createElement('button');
+  b.innerHTML = `${label}${sub ? `<small>${sub}</small>` : ''}`;
+  b.addEventListener('click', () => { audio.unlock(); onClick(); refresh(); });
+  parent.append(b);
+  buttons.push([b, isOn]);
+  return b;
+}
+
+function refresh() {
+  for (const [b, isOn] of buttons) b.classList.toggle('on', !!(isOn && isOn()));
+  const ctx = audio.context;
+  $('state').textContent = !audio.available ? 'no WebAudio in this browser'
+    : !ctx ? 'audio locked - click to start'
+      : `context ${ctx.state}, ${ctx.sampleRate} Hz | music: ${audio.playing ?? '-'} | ambience: ${audio.ambience}`
+        + `${audio.muted ? ' | MUTED' : ''}${audio.musicEnabled ? '' : ' | music off'}`;
+}
+
+button($('controls'), 'Mute', 'SOUND ON/OFF, F2', () => audio.setMuted(!audio.muted), () => audio.muted);
+button($('controls'), 'Music off', 'MUSIC ON/OFF', () => audio.setMusicEnabled(!audio.musicEnabled), () => !audio.musicEnabled);
+button($('controls'), 'Stop music', "music('stop')", () => audio.music('stop'));
+button($('controls'), 'Tape loop', "sfxLoop('tape')", () => audio.sfxLoop(audio.looping ? null : 'tape'), () => audio.looping);
+
+for (const id of TUNE_IDS) {
+  const t = TUNES[id];
+  const sec = tuneSeconds(compileTune(t)).toFixed(1);
+  button($('music'), id, `${sec} s${t.loop ? ' loop' : ''}`, () => audio.music(id), () => audio.playing === id);
+}
+for (const id of AMBIENT_IDS) button($('ambience'), id, '', () => audio.ambient(id), () => audio.ambience === id);
+for (const id of SFX_IDS) button($('sfx'), id, `${SFX[id].dur} s`, () => audio.sfx(id));
+
+document.addEventListener('keydown', (e) => {
+  audio.unlock();
+  if (e.key === 'F2' || e.key === 'm') { e.preventDefault(); audio.setMuted(!audio.muted); }
+  if (e.key === 's') audio.music('stop');
+  refresh();
+});
+setInterval(refresh, 500);
+refresh();
+</script>
+</body>
+</html>
