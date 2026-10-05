@@ -182,6 +182,8 @@ const NOUN_SLOTS = ['dobj', 'iobj'];
  * @property {CompiledPattern[]} unheaded  Patterns that start with a slot or optional literal.
  * @property {VerbHead[]} heads            Verb heads for error attribution, longest first.
  * @property {Set<string>} startWords      First words that start a command (P2).
+ * @property {Map<string, string[][]>} nounStarts  Start word → multiword entity names beginning with it
+ *   (`oil` → [['oil', 'can']]); splitChain keeps such a name inside a noun list (TT-016).
  * @property {Map<string, string>} prepWords  Single surface word → canonical preposition.
  * @property {Map<string, string[][]>} prepStarts  First word → multiword prepositions starting with it.
  * @property {Array<{verb: string, pattern: unknown}>} invalidPatterns  Content patterns that were dropped.
@@ -367,6 +369,21 @@ export function buildVocab(content) {
   const startWords = new Set(Object.keys(DIRECTION_WORDS));
   for (const h of heads) for (const a of h.els[0].alts) startWords.add(a.toks[0]);
 
+  // Multiword item / NPC / scenery names whose first word also starts a command
+  // ("oil can"): after AND / ',' such a name continues a noun list (P2, TT-016).
+  const nounStarts = new Map();
+  const nameLists = [...entities(c.items), ...entities(c.npcs)].map((e) => (e && typeof e === 'object' ? strings(e.names) : []));
+  for (const room of entities(c.rooms)) {
+    for (const sc of room && Array.isArray(room.scenery) ? room.scenery : []) if (sc && typeof sc === 'object') nameLists.push(strings(sc.names));
+  }
+  for (const name of nameLists.flat()) {
+    const toks = wordsOf(name);
+    if (toks.length < 2 || !startWords.has(toks[0])) continue;
+    if (!nounStarts.has(toks[0])) nounStarts.set(toks[0], []);
+    const list = nounStarts.get(toks[0]);
+    if (!list.some((t) => t.join(' ') === toks.join(' '))) list.push(toks);
+  }
+
   const prepWords = new Map();
   const prepStarts = new Map();
   for (const [id, forms] of Object.entries(PREPOSITIONS)) {
@@ -381,7 +398,7 @@ export function buildVocab(content) {
   }
 
   return {
-    verbs, verbById: byId, words, patterns, byHead, unheaded, heads, startWords, prepWords, prepStarts, invalidPatterns,
+    verbs, verbById: byId, words, patterns, byHead, unheaded, heads, startWords, nounStarts, prepWords, prepStarts, invalidPatterns,
   };
 }
 

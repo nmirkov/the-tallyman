@@ -2,7 +2,7 @@
 id: TT-016
 title: Content: Town and Canal zones (bundle framework, registries, NPCs)
 milestone: M3
-status: todo
+status: done
 agent: writer
 model: opus
 depends: [TT-010, TT-015]

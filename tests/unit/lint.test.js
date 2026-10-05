@@ -13,10 +13,9 @@ const LINT = fileURLToPath(new URL('../../tools/lint-content.js', import.meta.ur
 const lint = (content, opts = {}) => lintContent(content, { hasGlyph, ...opts });
 const show = (r) => [...r.errors.map((f) => formatFinding('error', f)), ...r.warnings.map((f) => formatFinding('warning', f))].join('\n');
 
-test('the real (still empty) content bundle lints without errors; strict mode refuses an empty bundle', () => {
+test('the real content bundle lints without errors; strict mode still refuses it (stubs, missing art)', () => {
   const r = lint(realContent);
   assert.deepEqual(r.errors, [], show(r));
-  assert.ok(r.warnings.some((w) => w.rule === 'L01'), 'empty bundle is reported as a warning');
   assert.ok(lint(realContent, { strict: true }).errors.length > 0);
 });
 

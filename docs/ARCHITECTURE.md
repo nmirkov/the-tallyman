@@ -568,7 +568,7 @@ Multiword verb words are matched longest first (`pick up` before `pick`). When s
 
 ### A6.2 Syntax layer (TT-005)
 - **P1** `tokenise(line)`: input normalisation (A12.3); `'s` is dropped (`pike's` → `pike`), other apostrophes removed, hyphens become spaces; `.` `;` `!` `?` become the token `'.'`; `,` becomes `','`; any other punctuation is removed; digits are kept.
-- **P2** `splitChain(tokens)`: separators are `'.'`, `then`, `and then`, and `','` / `and` **when the next token starts a command** (a verb word or a direction word). Otherwise `,` / `and` stay inside the segment (noun lists). Empty segments are dropped.
+- **P2** `splitChain(tokens)`: separators are `'.'`, `then`, `and then`, and `','` / `and` **when the next token starts a command** (a verb word or a direction word). Otherwise `,` / `and` stay inside the segment (noun lists). Empty segments are dropped. Exception (TT-016): if the tokens after `,` / `and` begin a known multiword content name (e.g. "oil can"), they stay in the noun list even though the first word is a verb word.
 - **P3** `parseCommand(tokens, vocab)` returns a `ParsedCommand` or a `ParseError`. Error priority: `empty` → `unknown-word` (first unknown word outside a `{topic}`) → `no-verb` (first word is not a verb or direction) → `missing-noun` (verb has a pattern with the slot but nothing followed) → `no-pattern`.
 - **P4** Noun phrases: fillers dropped; `{words}` keep every remaining word in order (adjectives and nouns are NOT classified at this layer); `it/them/him/her` → `{pronoun}`; `all`/`everything` → `{all:true}` with optional `except:[…]` after `except`/`but`; `x and y` / `x, y` → `{list:[…]}`.
 - **P5** Never throws, for any string.

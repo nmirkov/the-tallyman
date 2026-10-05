@@ -70,10 +70,17 @@ export function tokenise(line) {
  *  splitChain (P2)                                                    *
  * ------------------------------------------------------------------ */
 
+/** Does a multiword entity name that starts with a verb word ("oil can") begin at `k`? (TT-016) */
+function nameAt(vocab, toks, k) {
+  const names = vocab.nounStarts instanceof Map ? vocab.nounStarts.get(toks[k]) : undefined;
+  return Boolean(names && names.some((seq) => seq.every((w, j) => toks[k + j] === w)));
+}
+
 /**
  * Split tokens into command segments (A6.2 P2): `'.'`, `then` and `and then` always
  * separate; `','` / `and` separate only when the next token starts a command (a verb
- * word or a direction word). Empty segments are dropped. Never throws.
+ * word or a direction word) and does not begin a multiword entity name of the merged
+ * vocab ("take cutters and oil can" is one command). Empty segments are dropped. Never throws.
  * @param {string[]} tokens
  * @param {import('./vocab.js').Vocab} [vocab]  Defaults to the engine-only vocabulary;
  *   pass the merged vocab so content verbs also start commands.
@@ -91,7 +98,7 @@ export function splitChain(tokens, vocab) {
       const next = toks[i + 1];
       if (t === '.' || CHAIN_WORDS.includes(t)) { cut(); continue; }
       if (t === 'and' && next === 'then') { cut(); i++; continue; }
-      if ((t === ',' || t === 'and') && next !== undefined && v.startWords.has(next)) { cut(); continue; }
+      if ((t === ',' || t === 'and') && next !== undefined && v.startWords.has(next) && !nameAt(v, toks, i + 1)) { cut(); continue; }
       cur.push(t);
     }
     cut();

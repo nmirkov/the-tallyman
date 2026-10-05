@@ -136,6 +136,18 @@ describe('splitChain', () => {
   test('an article after AND keeps a verb-like noun in the list', () => {
     assert.deepEqual(sc('take key and the light'), ['take key and the light']);
   });
+  test('TT-016: a multiword name that starts with a verb word stays in the list (STORY §12.1 #48)', () => {
+    assert.deepEqual(sc('take cutters and oil can'), ['take cutters and oil can']);
+    assert.deepEqual(sc('take cutters, oil can'), ['take cutters , oil can']);
+    assert.deepEqual(parse('take cutters and oil can'), {
+      verb: 'take', verbWord: 'take', dobj: { list: [w('cutters'), w('oil', 'can')] }, raw: 'take cutters and oil can',
+    });
+    // Only the whole name protects the noun: a verb word not followed by its name still splits.
+    assert.deepEqual(sc('take cutters and oil gates'), ['take cutters', 'oil gates']);
+    assert.deepEqual(sc('take cutters and oil'), ['take cutters', 'oil']);
+    // Engine-only vocabulary knows no names, so the contract rule applies unchanged.
+    assert.deepEqual(splitChain(tokenise('take cutters and oil can')).map((s) => s.join(' ')), ['take cutters', 'oil can']);
+  });
   test('a multiword-verb head (pick up) starts a command', () => {
     assert.deepEqual(sc('drop coat, pick up key'), ['drop coat', 'pick up key']);
   });
