@@ -2,7 +2,7 @@
 id: TT-007
 title: Parser resolution — bind noun phrases to world objects, disambiguation, pronouns, ALL, AGAIN
 milestone: M1
-status: todo
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-005, TT-006]
