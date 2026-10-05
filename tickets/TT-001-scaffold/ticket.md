@@ -2,7 +2,7 @@
 id: TT-001
 title: Scaffold project with working check pipeline and minimal single-file build
 milestone: M0
-status: todo
+status: done
 agent: engine-dev
 model: sonnet
 depends: []

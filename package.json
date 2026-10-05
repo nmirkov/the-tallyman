@@ -1,0 +1,21 @@
+{
+  "name": "the-tallyman",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/",
+    "lint:content": "node tools/lint-content.js",
+    "build": "node tools/build.js",
+    "check": "npm run lint:content && npm run test && npm run build",
+    "start": "node tools/serve.js",
+    "play": "node tools/play.js",
+    "progress": "node tools/progress.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

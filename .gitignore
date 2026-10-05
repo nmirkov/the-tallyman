@@ -3,3 +3,4 @@ dist/
 reviews/
 *.log
 .DS_Store
+saves/
