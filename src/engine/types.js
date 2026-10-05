@@ -195,7 +195,7 @@ export const MESSAGES = deepFreeze({
  * @typedef {string} VerbId     Canonical verb id, e.g. 'take', 'go', 'accuse'.
  * @typedef {string} SfxId      Sound-effect id, e.g. 'door', 'thunder', 'sting', 'pickup'.
  * @typedef {'n'|'ne'|'e'|'se'|'s'|'sw'|'w'|'nw'|'u'|'d'|'in'|'out'} Dir
- * @typedef {'in'|'on'|'with'|'from'|'to'|'at'|'about'|'under'|'behind'} PrepId
+ * @typedef {'in'|'on'|'with'|'from'|'to'|'at'|'about'|'under'|'behind'|'over'} PrepId
  * @typedef {RoomId|ItemId|NpcId|'player'|null} Loc  Item location; null = not in the world.
  * @typedef {'normal'|'title'|'alert'|'whisper'|'echo'|'system'} TextStyle
  */
@@ -616,7 +616,7 @@ export const MESSAGES = deepFreeze({
  * @property {VerbId} id
  * @property {string[]} [words]          Synonyms, may be multiword ('turn on').
  * @property {string[]} [patterns]       Grammar, e.g. 'put {dobj} in|into {iobj}'.
- * @property {'world'|'meta'|'system'} [class]
+ * @property {'world'|'meta'|'system'|'special'} [class]
  * @property {Text} [default]            Content verbs: said when no reaction handles it.
  * @property {Text} [notHere]            Replaces MESSAGES.notHere for this verb.
  * @property {'carried'|'notCarried'|'worn'|'closed'|'open'|'unlit'|'lit'} [prefer]  Disambiguation preference (A6.3 M4).

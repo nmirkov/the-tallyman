@@ -2,7 +2,7 @@
 id: TT-005
 title: Parser syntax layer — tokenise, normalise, match grammar
 milestone: M1
-status: in-progress
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-002]
