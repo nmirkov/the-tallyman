@@ -1,20 +1,26 @@
 # Status
 
-**Phase:** M4 release — paused at the usage limit. Game complete & winnable; finale-fairness fixes (TT-130/131) next.
+**Phase:** **v1.0 released** (tag `v1.0`).
 **Updated:** 2026-10-06
 
 | Milestone | State |
 |---|---|
-| Plan | v1.2 **APPROVED WITH NOTES** by Codex (3 rounds) |
-| M0 Foundations | **done** (tag `m0`): scaffold, engine contract, screen renderer, progress page |
-| M1 Engine | **done** (tag `m1`) · R1: 9 + 2 defects fixed (TT-101/102), approved round 3 |
-| M2 Presentation | TT-013 audio ✔ (audit 36/36) |
-| M3 Content | TT-015 story ✔, TT-016 town/canal ✔, TT-019 art style ✔ · TT-017, TT-020a/b, TT-021 running |
-| M4 Release | not started |
+| Plan | v1.2 approved by Codex (3 rounds) |
+| M0 Foundations | done (`m0`) |
+| M1 Engine | done (`m1`) — R1: 11 defects fixed over 3 rounds |
+| M2 Presentation | done (`m2`) — R2: 2 defects fixed |
+| M3 Content | done (`m3`) — R3 approved with notes; 4 softlocks found by QA and fixed |
+| M4 Release | done (`v1.0`) — smoke 8/8, blind playtest (3 testers, all won), R4 Codex APPROVED WITH NOTES |
+
+## Numbers
+- ~1,900 automated tests (unit, content, walkthrough, solvability, save-determinism, fuzz); strict content lint 0 errors.
+- 42 locations with PETSCII pictures + dark view, title + 6 ending screens, 20 SFX, 4 tunes, 6 ambiences.
+- Release build: one offline file, ~475 KB.
+
+## Known gaps (post-1.0)
+- No automated touch/IME/mobile-keyboard smoke (D-013).
+- Audio verified by measurement only — nobody has listened to it yet (`tools/audio-demo.html`).
 
 ## Log
-- 2026-10-05 — Plan drafted; Codex review R1 CHANGES REQUIRED (5 blockers) → v1.1; R2 CHANGES REQUIRED (2) → v1.2; R3 APPROVED WITH NOTES.
-- 2026-10-06 — M0 complete (contract approved by orchestrator). TT-005/006/007/013 delivered and verified in clean worktrees; 640 tests green.
-- 2026-10-06 — Engine complete (TT-008/009/010). Codex R1 found 9 real defects → TT-101. Story bible approved; real game playable in Town/Canal; art style approved.
-- 2026-10-06 — Codex ran out of credits (D-009): fallback independent reviewer. R1 APPROVED WITH NOTES → tag m1. All art done (42 locations, title, 6 endings). Game winnable 100/100 in the engine.
-- 2026-10-06 03:35 — M2 and M3 approved (tags m2, m3). Smoke 8/8. Blind playtest: both testers won; finale guidance is the main fix left. Paused: Claude spend limit.
+- 2026-10-05 — Plan drafted; Codex plan review 3 rounds → approved.
+- 2026-10-06 — Engine, presentation, content, art, QA built by agents; Codex out of credits mid-way (D-009, fallback reviewer); blind playtests; finale guidance fixed; Codex back for the final review; v1.0.

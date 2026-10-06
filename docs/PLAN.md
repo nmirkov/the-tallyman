@@ -149,7 +149,7 @@ The car's notebook page is a lead, not evidence.
 **ACCUSE <person>.** Free of turn cost only when it does not resolve (e.g. person not
 present → "Accuse who? They're not here."). Otherwise 1 turn.
 - Pike, present, evidence ≥ 3 → correct accusation (+10). If at the Police House:
-  Pike shoves past you and flees; `pike` moves to the Counting Room 5 turns later
+  Pike shoves past you and flees; `pike` moves to the Counting Room 4 turns later
   (`pike_state: fled`). In the Counting Room: points only (the confrontation continues).
 - Pike, present, evidence < 3 → he laughs it off, nerve +15, may retry.
 - Ashdown / Maggie / Silas, present → "Are you certain? (Y/N)" — pending confirmation

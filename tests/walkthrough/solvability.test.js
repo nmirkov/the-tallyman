@@ -4,7 +4,9 @@
 // STORY / PLAN rules, not observed engine output.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup } from '../fixtures/harness.js';
+import { setup, cloneContent } from '../fixtures/harness.js';
+import { createRun } from '../../src/engine/api.js';
+import { exitsOf as worldExitsOf } from '../../src/engine/world.js';
 import {
   content, WALKTHROUGH, times, texts, joined, endOf, fresh, run, feed, snap,
   assertEnding, assertRunning, evidenceCount, isCarried,
@@ -1114,8 +1116,9 @@ describe('STORY §13 softlock audit', () => {
     assert.equal(s.items.cabinet.open, true);
   });
 
-  test('every room stays reachable from the start after the walkthrough (no exit ever removed)', () => {
-    // BFS over the exit table with the walkthrough's flags in place
+  test('static exit topology: every room appears as an exit destination (ignores conditions, doors, state)', () => {
+    // Pure topology BFS over raw exit destinations. It does NOT detect a gate that became
+    // impassable; the state-aware test below does that.
     const { g } = run(WALKTHROUGH.slice(0, 90));
     const reach = new Set(['platform']);
     const queue = ['platform'];
@@ -1128,5 +1131,85 @@ describe('STORY §13 softlock audit', () => {
     }
     assert.equal(reach.size, Object.keys(content.rooms).length);
     assertRunning(g);
+  });
+
+  describe('state-aware reachability (engine exitsOf: conditions, doors, walkthrough state)', () => {
+    /** Why a room is legitimately out of reach at a checkpoint (STORY §3.3 / §7). */
+    const MILL_BEYOND = ['mill_yard', 'weaving_shed', 'counting_house', 'boiler_room', 'tunnel', 'counting_room'];
+    const GATED = {
+      // Gates still chained (mill_chain_cut unset): everything beyond the mill gates is closed.
+      'after Silas is told (turn 45)': MILL_BEYOND,
+      'mill chain cut (turn 52)': ['counting_room'], // Msg F: needs Pike below AND a carried, lit torch
+      'in the tunnel (turn 88)': [],
+      'end of the walkthrough prefix (turn 90)': [],
+    };
+
+    /** Rooms reachable from the platform, following exits the engine says are condition-passable. */
+    function reachable(gameState, bundle) {
+      const r = createRun({ state: gameState, content: bundle });
+      const seen = new Set(['platform']);
+      const queue = ['platform'];
+      while (queue.length) {
+        const room = queue.shift();
+        for (const e of worldExitsOf(gameState, bundle, room, r.hook)) {
+          // A closed door is openable by the player; only the exit condition is a hard gate.
+          if (!e.condOk || e.stub || seen.has(e.to)) continue;
+          seen.add(e.to);
+          queue.push(e.to);
+        }
+      }
+      return seen;
+    }
+
+    /** Plays the walkthrough and returns [label, saved state] at each checkpoint. */
+    function checkpoints() {
+      const g = fresh();
+      const out = {};
+      WALKTHROUGH.forEach((cmd, i) => {
+        g.input(cmd);
+        const s = g.snapshot();
+        const at = { 45: 'after Silas is told (turn 45)', 52: 'mill chain cut (turn 52)',
+          88: 'in the tunnel (turn 88)', 90: 'end of the walkthrough prefix (turn 90)' }[i + 1];
+        if (at) out[at] = structuredClone(g.save().state);
+        assert.ok(s.ended === null || i >= 90);
+      });
+      return out;
+    }
+
+    const missing = (state, bundle) => {
+      const seen = reachable(state, bundle);
+      return Object.keys(bundle.rooms).filter((r) => !seen.has(r));
+    };
+
+    test('every room is reachable at each checkpoint except the explicitly gated ones', () => {
+      const cps = checkpoints();
+      for (const [label, state] of Object.entries(cps)) {
+        const bundle = cloneContent(content);
+        assert.deepEqual(missing(state, bundle).sort(), [...GATED[label]].sort(), label);
+      }
+    });
+
+    test('the checkpoints really are where the story says (guard against drifting indexes)', () => {
+      const cps = checkpoints();
+      assert.ok(!cps['after Silas is told (turn 45)'].flags.mill_chain_cut);
+      assert.ok(cps['mill chain cut (turn 52)'].flags.mill_chain_cut);
+      assert.equal(cps['in the tunnel (turn 88)'].roomId, 'tunnel');
+    });
+
+    test('a permanently false mill-gate condition is caught (mutation of a cloned bundle)', () => {
+      // The mill is also reachable via the asylum morgue and tunnel (redundant routes), so the
+      // gate edge itself is asserted rather than room reachability.
+      const gateOpen = (state, bundle) => {
+        const r = createRun({ state, content: bundle });
+        return worldExitsOf(state, bundle, 'mill_gates', r.hook).filter((e) => e.to === 'mill_yard').every((e) => e.condOk);
+      };
+      const cps = checkpoints();
+      const cut = cps['mill chain cut (turn 52)'];
+      assert.ok(gateOpen(cut, cloneContent(content)), 'sanity: the cut chain opens the gate');
+      const bundle = cloneContent(content);
+      for (const dir of ['n', 'in']) bundle.rooms.mill_gates.exits[dir].if = { any: [] };
+      assert.ok(!gateOpen(cut, bundle), 'a never-true gate condition must be seen as closed');
+      assert.ok(!gateOpen(cps['end of the walkthrough prefix (turn 90)'], bundle));
+    });
   });
 });

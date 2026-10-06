@@ -59,3 +59,8 @@ Reviewer drove dist/tallyman.html in headless Chrome. 2 blocking (typewriter ski
 
 ### Round 2 — 2026-10-06 — **APPROVED WITH NOTES** (same-vendor fallback, D-009)
 Both round-1 blockers RESOLVED (re-run in headless Chrome on a fresh build). 6 non-blocking notes (duplicate lint id L11, heldKey on blur, Ctrl+Alt breadth, lint importing src/ui/fx.js, MAX_TICK_MS trade-off, no title tune for skipboot) → folded into the post-playtest polish ticket. Tag `m2`.
+
+## Final release review R4 (`plan-approved..HEAD`) — Codex is back
+
+### Round 1 — 2026-10-06 — **APPROVED WITH NOTES** (cross-vendor: Codex gpt-6-astra, high)
+Catch-up review over the whole project with emphasis on what Codex had not seen (src/ui, content, softlock fixes, QA suites, smoke) — closes the D-009 obligation. 0 blocking. Codex rebuilt the release independently (byte-identical 474 884 bytes, no external refs). Notes: (1) bookkeeping — fixed; (2) Pike delay 5 vs 4 turns — PLAN corrected (D-012); (3) solvability reachability test was topology-only — renamed + state-aware traversal added; (4) no touch/IME smoke — accepted as known gap (D-013).

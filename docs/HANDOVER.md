@@ -5,16 +5,9 @@
 > the tickets in `tickets/`. Nenad asked for a fully autonomous build — do not ask
 > him questions; decide and log in DECISIONS.md.
 
-## Snapshot — 2026-10-06 03:35, paused (Claude spend limit hit; resets 03:40 Europe/Belgrade)
-- HEAD `4ab05da` (TT-023), working tree clean. Tags: plan-approved, m0, m1, m2, m3. 1846 tests green; `npm run smoke` 8/8.
-- Codex still out of credits (D-009) -> fallback reviewer (model fable).
-- **Game is complete and winnable** (browser + terminal). Blind playtest done: both testers won (A 100/100 on 2nd try, B 89/100), 8/10.
-- **Remaining work (in order):**
-  1. TT-130 finale guidance (high) then TT-131 playtest parser/content gaps (medium) — specs ready; agent was killed by the spend limit before writing anything. Re-dispatch one writer+engine agent (opus) for both.
-  2. TT-132 R2 UI notes (low, sonnet).
-  3. Re-run `npm run smoke`; quick re-playtest of the finale (fresh blind agent, finale only).
-  4. TT-025 final docs (README: how to play, commands, credits incl. font8x8 public domain), final progress page.
-  5. R4 final review (fallback reviewer unless Codex has credits), then tag `v1.0`.
+## Snapshot — 2026-10-06, v1.0 released
+- All 38 tickets done; tags plan-approved, m0, m1, m2, m3, v1.0. Nothing in flight.
+- If resuming for v1.1: see STATUS.md "Known gaps"; Codex has credits again (check with a 1-line probe first).
 
 ## How the orchestrator works
 1. Dispatch: `Agent(subagent_type: general-purpose, model: <ticket model>)`, prompt =
