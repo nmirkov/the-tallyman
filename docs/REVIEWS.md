@@ -56,3 +56,6 @@ Reviewer played the game adversarially via tools/play.js. 0 blocking; 13 notes (
 
 ### Round 1 — 2026-10-06 — CHANGES REQUIRED (same-vendor fallback, D-009)
 Reviewer drove dist/tallyman.html in headless Chrome. 2 blocking (typewriter skipped after QUIT→title→new game; title without prior gesture needs two key presses) + 12 notes → **TT-106**.
+
+### Round 2 — 2026-10-06 — **APPROVED WITH NOTES** (same-vendor fallback, D-009)
+Both round-1 blockers RESOLVED (re-run in headless Chrome on a fresh build). 6 non-blocking notes (duplicate lint id L11, heldKey on blur, Ctrl+Alt breadth, lint importing src/ui/fx.js, MAX_TICK_MS trade-off, no title tune for skipboot) → folded into the post-playtest polish ticket. Tag `m2`.
