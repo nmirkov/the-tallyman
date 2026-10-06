@@ -62,19 +62,16 @@ export function bootStart({ boot = null, skipboot = null, scripted = false, redu
 /**
  * The boot state machine. Pure: time comes in as `now` (ms) and side effects go out as
  * data. The host applies the effects (tape loop, music, starting the game).
- * @param {{flavour?: 'c64'|'spectrum', start?: 'power'|'title', now?: number,
- *   music?: boolean|(() => boolean), gestured?: boolean}} [opts]
- *   music: whether the title tune would be heard (sound and music on). gestured: a user
- *   gesture has already unlocked audio (e.g. QUIT back to the title).
+ * One key on the title starts the game, also when no gesture has unlocked audio yet
+ * (skipboot, reduced motion): a dead first key reads as broken, and the full boot's PLAY
+ * key is what lets the title tune be heard (TT-106).
+ * @param {{flavour?: 'c64'|'spectrum', start?: 'power'|'title', now?: number}} [opts]
  */
 export function createBootMachine(opts = {}) {
   const flavour = opts.flavour === 'spectrum' ? 'spectrum' : 'c64';
   const timing = BOOT_TIMING[flavour];
-  const wantsMusic = () => (typeof opts.music === 'function' ? !!opts.music() : opts.music !== false);
   let phase = null;
   let since = 0;
-  let gestured = !!opts.gestured;
-  let holdForMusic = false;
 
   /** @returns {BootEffect[]} */
   function enter(next, now) {
@@ -86,9 +83,6 @@ export function createBootMachine(opts = {}) {
     if (next === 'title') {
       if (was === 'search' || was === 'load') fx.push({ type: 'tape', on: false });
       fx.push({ type: 'music', id: 'title' });
-      // Without a gesture yet the tune cannot start: the first key unlocks audio and
-      // starts it, the next one starts the game (the title tune is heard either way).
-      holdForMusic = !gestured && wantsMusic();
     }
     if (next === 'done') fx.push({ type: 'music', id: 'stop' }, { type: 'start' });
     return fx;
@@ -99,7 +93,6 @@ export function createBootMachine(opts = {}) {
   return {
     get phase() { return phase; },
     get flavour() { return flavour; },
-    get holdForMusic() { return holdForMusic; },
     /** Effects of entering the start phase (apply them once after creating). */
     initial,
     /** ms spent in the current phase. */
@@ -124,11 +117,9 @@ export function createBootMachine(opts = {}) {
      * @returns {BootEffect[]}
      */
     key(now) {
-      gestured = true;
       if (phase === 'play') return enter('search', now);
       if (SKIPPABLE.has(phase)) return enter('title', now);
       if (phase === 'title') {
-        if (holdForMusic) { holdForMusic = false; return []; } // this key unlocked the tune
         if (now - since < BOOT_TIMING.titleMinMs) return [];
         return enter('done', now);
       }
@@ -327,8 +318,6 @@ export function stripeBands(mode, height, unit, tick) {
  * @param {object|null} host.titleArt     content.art.title (40x25)
  * @param {'power'|'title'} [host.start]
  * @param {boolean} [host.reducedMotion]  steady PRESS ANY KEY, no fx
- * @param {boolean} [host.gestured]       audio already unlocked
- * @param {() => boolean} [host.music]    the title tune would be heard
  * @param {() => void} host.onStart       the player pressed a key on the title
  * @param {number} [host.now]
  */
@@ -338,7 +327,7 @@ export function createBoot(host) {
   const rows = screen.rows;
   const flavour = bootFlavour(screen.theme.name);
   const machine = createBootMachine({
-    flavour, start: host.start, music: host.music, gestured: host.gestured, now: host.now ?? 0,
+    flavour, start: host.start, now: host.now ?? 0,
   });
   const titleLayer = createArtLayer(screen, { top: 0, reducedMotion: !!host.reducedMotion });
   let stripeMode = null;
@@ -427,7 +416,6 @@ export function createBoot(host) {
     get phase() { return machine.phase; },
     get flavour() { return flavour; },
     get active() { return active; },
-    get holdForMusic() { return machine.holdForMusic; },
     /** Advance and draw; call once per animation frame (before screen.render()). */
     frame(now) {
       if (!active) return;

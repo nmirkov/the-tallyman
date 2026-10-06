@@ -20,6 +20,13 @@ export const TERMINAL_DEFAULTS = Object.freeze({
   blinkHz: 1.6, // C64 cursor rate
 });
 
+/**
+ * Longest step the typewriter takes from one tick (ms). The host may stop ticking the
+ * terminal for a while (boot / title screen, a background tab); that gap must not be spent
+ * as typing budget on the next frame (TT-106).
+ */
+export const MAX_TICK_MS = 100;
+
 const STYLE_ROLES = Object.freeze({
   normal: 'fg', title: 'title', alert: 'alert', whisper: 'whisper', echo: 'echo', system: 'system',
 });
@@ -242,6 +249,8 @@ export function createTerminalCore(opts = {}) {
   const history = createHistory(cfg.historySize);
 
   let region = regionFor(cfg.graphics ?? true);
+  /** The command echo counts towards [MORE] paging (off on tiny regions such as the ending screen). */
+  let echoPages = true;
   let typewriter = cfg.typewriter ?? true;
   let reducedMotion = !!cfg.reducedMotion;
   let rate = cfg.rate;
@@ -302,7 +311,7 @@ export function createTerminalCore(opts = {}) {
     history.push(line);
     if (lastQueued && lastQueued.text !== '') enqueueLine('', 'normal', { count: false, instant: true });
     linesSinceInput = 0;
-    for (const l of wrapText(PROMPT + line, cols)) enqueueLine(l, 'echo', { instant: true });
+    for (const l of wrapText(PROMPT + line, cols)) enqueueLine(l, 'echo', { instant: true, count: echoPages });
     setInputState({ text: '', cursor: 0 });
     emitKey('enter');
     cfg.onSubmit?.(line);
@@ -345,7 +354,7 @@ export function createTerminalCore(opts = {}) {
     tick(t) {
       now = t;
       if (last === null) last = t;
-      const elapsed = t - last;
+      const elapsed = Math.min(MAX_TICK_MS, t - last);
       last = t;
       const instant = !typewriter || reducedMotion || skipping;
       let budget;
@@ -420,6 +429,15 @@ export function createTerminalCore(opts = {}) {
       wasReady = r;
     },
 
+    /**
+     * Forget the previous tick time: the next tick counts as no elapsed time. Call when the
+     * terminal resumes after not being ticked (e.g. a new game after the title screen).
+     */
+    resetClock() {
+      last = null;
+      carry = 0;
+    },
+
     // ------------------------------------------------ input
     /**
      * Handle one key (KeyboardEvent.key names). Returns true when the key was used, so the
@@ -490,6 +508,10 @@ export function createTerminalCore(opts = {}) {
       setInputState({ text: clean, cursor: c });
       emitKey(kind);
     },
+    /** Empty the input line (a new screen such as the ending prompt drops type-ahead). */
+    clearInput() {
+      setInputState({ text: '', cursor: 0 });
+    },
     /** Enable/disable the input line (e.g. while a file picker is open). */
     setInputEnabled(on) {
       inputEnabled = !!on;
@@ -501,9 +523,15 @@ export function createTerminalCore(opts = {}) {
     setGraphics(on) {
       core.setRegion(regionFor(!!on));
     },
-    /** Use an explicit region ({top, bottom} rows, bottom = input line). */
+    /**
+     * Use an explicit region ({top, bottom} rows, bottom = input line). `echoPages: false`
+     * keeps the command echo out of the [MORE] count, so a two-row answer on a three-row
+     * region needs no [MORE] (the echo scrolls off instead). Defaults to true.
+     * @param {{top:number, bottom:number, echoPages?: boolean}} r
+     */
     setRegion(r) {
       region = { top: r.top, bottom: r.bottom };
+      echoPages = r.echoPages !== false;
       scrollOffset = Math.min(scrollOffset, maxScroll());
       version++;
     },
@@ -577,6 +605,34 @@ export function createTerminalCore(opts = {}) {
   return core;
 }
 
+/**
+ * The modifier flags `core.key` should see for a keydown. AltGr (reported as Ctrl+Alt on
+ * Windows) types characters such as '@' or '£' on many European layouts: those are text,
+ * not shortcuts, so they are passed without ctrl/alt (TT-106).
+ * @param {{key?: string, ctrlKey?: boolean, altKey?: boolean, metaKey?: boolean,
+ *   getModifierState?: (k: string) => boolean}} e
+ * @returns {{ctrl: boolean, alt: boolean, meta: boolean}}
+ */
+export function keyMods(e) {
+  const meta = !!e.metaKey;
+  const k = typeof e.key === 'string' ? e.key : '';
+  const altGraph = !!e.getModifierState?.('AltGraph')
+    || (!!e.ctrlKey && !!e.altKey && !meta && Array.from(k).length === 1 && !/^[a-z0-9]$/i.test(k));
+  if (altGraph && Array.from(k).length === 1) return { ctrl: false, alt: false, meta };
+  return { ctrl: !!e.ctrlKey, alt: !!e.altKey, meta };
+}
+
+/**
+ * Whether a keydown counts as "press any key" (ending text, title): a fresh press, not an
+ * auto-repeat, not a lone modifier, not a browser shortcut or function key (TT-106).
+ * @param {{key?: string, repeat?: boolean, ctrlKey?: boolean, altKey?: boolean, metaKey?: boolean}} e
+ */
+export function isAnyKeyPress(e) {
+  const k = typeof e.key === 'string' ? e.key : '';
+  if (!k || e.repeat || MODIFIER_KEYS.has(k) || /^F\d+$/.test(k)) return false;
+  return !e.ctrlKey && !e.altKey && !e.metaKey;
+}
+
 // ---------------------------------------------------------------- browser adapter
 
 const HIDDEN_CSS = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;'
@@ -647,7 +703,7 @@ export function createTerminal(screen, opts = {}) {
     if (e.isComposing || e.keyCode === 229) return; // soft keyboards: the input event carries it
     const t = e.target;
     if (t !== field && t?.closest?.('input, textarea, select, button, [contenteditable]')) return;
-    if (core.key(e.key, { ctrl: e.ctrlKey, alt: e.altKey, meta: e.metaKey })) {
+    if (core.key(e.key, keyMods(e))) {
       e.preventDefault();
       syncField();
     }
@@ -718,6 +774,8 @@ export function createTerminal(screen, opts = {}) {
       core.print(text, style);
       transcript(text, style);
     },
+    /** Add a line to the transcript only (text drawn outside the terminal region). */
+    transcribe: (text, style) => transcript(text, style),
     clear: () => core.clear(),
     pause: (ms) => core.pause(ms),
     mark: (fn) => core.mark(fn),
@@ -725,6 +783,7 @@ export function createTerminal(screen, opts = {}) {
     setTypewriter: (on) => core.setTypewriter(on),
     setRate: (cps) => core.setRate(cps),
     setInputEnabled(on) { core.setInputEnabled(on); if (on) syncField(); },
+    clearInput() { core.clearInput(); syncField(); },
     /** Force a full redraw of the region on the next frame (e.g. after a theme change). */
     invalidate() { drawnKey = ''; },
     /**

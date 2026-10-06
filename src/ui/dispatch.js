@@ -104,16 +104,25 @@ export function createDispatcher(ui, opts = {}) {
     }
   }
 
-  /** Apply a presentation setting: resolve, persist, apply in order, acknowledge. */
-  function setting(key, value) {
+  /**
+   * Apply a presentation setting: resolve, persist, apply in order, acknowledge.
+   * @param {string} key
+   * @param {string} value
+   * @param {{ack?: boolean}} [opts]  ack:false skips the acknowledgement text (F2 in the boot)
+   */
+  function setting(key, value, { ack = true } = {}) {
     const r = resolveSetting(settings, key, value);
     settings[key] = r.value;
     try { ui.adapter.writeSetting(key, r.value); } catch { /* adapter never throws; belt and braces */ }
     ui.mark(() => ui.applySetting(key, r.value));
-    sys(r.ack);
+    if (ack) sys(r.ack);
     return r;
   }
 
+  // Runs synchronously inside the keydown that submitted IMPORT, never behind a mark():
+  // that keypress's user activation is what lets pickFile()'s input.click() open the file
+  // chooser in Chrome. Deferring it (even to honour O1 ordering strictly) silently breaks
+  // the picker.
   function importSave() {
     ui.setInputEnabled(false);
     let p;

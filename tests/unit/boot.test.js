@@ -41,7 +41,6 @@ for (const flavour of ['c64', 'spectrum']) {
     const t = BOOT_TIMING[flavour];
     assert.deepEqual(types(m.tick(5000 + t.search)), ['phase:load']);
     assert.deepEqual(types(m.tick(5000 + t.search + t.load)), ['phase:title', 'tape:false', 'music:title']);
-    assert.equal(m.holdForMusic, false, 'the PLAY key already unlocked audio');
     assert.deepEqual(types(m.key(5000 + t.search + t.load + BOOT_TIMING.titleMinMs)), ['phase:done', 'music:stop', 'start']);
     assert.equal(m.phase, 'done');
     assert.deepEqual(m.key(99_999), [], 'keys after done do nothing');
@@ -69,7 +68,6 @@ test('any key during power, type, search or load skips to the title', () => {
     assert.equal(m.phase, 'title', at);
     assert.ok(fx.includes('music:title'), at);
     assert.equal(fx.includes('tape:false'), at === 'search' || at === 'load', `${at}: tape stopped only if running`);
-    assert.equal(m.holdForMusic, false, `${at}: the skip key was the gesture`);
   }
 });
 
@@ -82,22 +80,19 @@ test('title: keys inside titleMinMs are ignored (held / double keys)', () => {
   assert.deepEqual(types(m.key(10 + BOOT_TIMING.titleMinMs)), ['phase:done', 'music:stop', 'start']);
 });
 
-test('title without a prior gesture: first key starts the tune, second starts the game', () => {
+test('title without a prior gesture (skipboot / reduced motion): the first key starts the game (TT-106)', () => {
+  // R2-1 issue 2: no silent "unlock the tune" key; the start bundle's music stop cuts the tune
   const m = createBootMachine({ start: 'title', now: 0 });
   assert.deepEqual(types(m.initial), ['phase:title', 'music:title']);
-  assert.equal(m.holdForMusic, true);
-  assert.deepEqual(m.key(5000), [], 'first key = audio unlock');
-  assert.equal(m.phase, 'title');
-  assert.deepEqual(types(m.key(5100)), ['phase:done', 'music:stop', 'start']);
+  assert.deepEqual(types(m.key(5000)), ['phase:done', 'music:stop', 'start']);
+  assert.equal(m.phase, 'done');
+  assert.equal('holdForMusic' in m, false, 'no hold state any more');
 });
 
-test('title without a gesture but with music off (or already gestured): one key starts', () => {
-  const off = createBootMachine({ start: 'title', music: () => false, now: 0 });
-  assert.equal(off.holdForMusic, false);
-  assert.deepEqual(types(off.key(1000)), ['phase:done', 'music:stop', 'start']);
-  const quit = createBootMachine({ start: 'title', gestured: true, now: 0 });
-  assert.equal(quit.holdForMusic, false);
-  assert.deepEqual(types(quit.key(1000)), ['phase:done', 'music:stop', 'start']);
+test('title reached by QUIT: one key starts, after the debounce', () => {
+  const quit = createBootMachine({ start: 'title', now: 1000 });
+  assert.deepEqual(quit.key(1000 + BOOT_TIMING.titleMinMs - 1), [], 'held / double key ignored');
+  assert.deepEqual(types(quit.key(1000 + BOOT_TIMING.titleMinMs)), ['phase:done', 'music:stop', 'start']);
 });
 
 test('PHASES lists every phase the machine can be in', () => {

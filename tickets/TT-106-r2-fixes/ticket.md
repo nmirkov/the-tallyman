@@ -2,7 +2,7 @@
 id: TT-106
 title: Fix R2 presentation review findings
 milestone: BUG
-status: in-progress
+status: done
 agent: ui-dev
 model: opus
 depends: [TT-014]

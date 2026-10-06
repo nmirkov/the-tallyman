@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { wrapLine, wrapText, textWidth } from '../../src/ui/wrap.js';
 import {
   createHistory, editInput, inputWindow, typeBudget, blinkOn, regionFor, outputRows,
-  needsMore, styleRole, sanitiseInput, createTerminalCore, PROMPT, MORE_TEXT,
+  needsMore, styleRole, sanitiseInput, createTerminalCore, PROMPT, MORE_TEXT, MAX_TICK_MS,
 } from '../../src/ui/terminal.js';
 import { CURSOR } from '../../src/ui/font8x8.js';
 
@@ -241,6 +241,32 @@ test('core: typewriter reveals ~400 chars/s, instant when off', () => {
   r.core.print('no motion please');
   r.tick(1);
   assert.equal(r.screen()[0], 'no motion please', 'prefers-reduced-motion = instant');
+});
+
+test('core: a long gap between ticks (terminal not ticked on the title / boot) is not typing budget (TT-106)', () => {
+  // R2-1 issue 1: last tick before QUIT, no ticks while the title is up, then the intro
+  const t = makeCore();
+  t.core.tick(0);
+  t.core.print('y'.repeat(400));
+  t.core.tick(60000);
+  const ys = t.core.compose(60000).rows.flat().filter((c) => c.ch === 'y').length;
+  assert.ok(ys <= Math.ceil(MAX_TICK_MS * 0.4), `at most one clamped frame of text, got ${ys} chars`);
+  assert.equal(t.core.more, false, 'no [MORE] page dumped at once');
+  t.core.tick(60016);
+  const after = t.core.compose(60016).rows.flat().filter((c) => c.ch === 'y').length;
+  assert.ok(after - ys <= 7, 'then 400 cps again');
+});
+
+test('core: resetClock() makes the next tick start from zero elapsed time (TT-106)', () => {
+  const t = makeCore();
+  t.core.tick(0);
+  t.core.tick(16);
+  t.core.resetClock();
+  t.core.print('x'.repeat(40));
+  t.core.tick(90000);
+  assert.equal(t.core.compose(90000).rows[0].filter((c) => c.ch === 'x').length, 0, 'first tick after reset: no time has passed');
+  t.core.tick(90025);
+  assert.equal(t.core.compose(90025).rows[0].filter((c) => c.ch === 'x').length, 10, '25 ms at 400 cps');
 });
 
 test('core: any key fast-forwards the current output', () => {

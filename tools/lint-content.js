@@ -17,6 +17,7 @@ import {
   PALETTE_KEYS, ART_FX, LIMITS, MIDNIGHT_TURN,
 } from '../src/engine/types.js';
 import { varProblem, initialCaps } from '../src/engine/state.js';
+import { fxMayChange, cellAt } from '../src/ui/fx.js';
 
 /**
  * @typedef {{rule: string, path: string, message: string}} Finding
@@ -713,6 +714,31 @@ function runRules(content, options, errors, warnings) {
     }
     asArr(a.fx).forEach((fx, i) => { if (!ART_FX.includes(fx)) err('L11', `${p}.fx[${i}]`, `unknown effect ${q(fx)}`); });
   }
+
+  // L11 (TT-106): an ending art's rows 19-24 carry the title, score, rank and the ending
+  // prompt; its fx must never touch them (the fx layer restores cells it changed, which
+  // would wipe the text drawn there).
+  const reservedTop = ART_SIZES.screen.h - 6;
+  const fxChecked = new Set();
+  endings.forEach((e) => {
+    const a = isObj(e) && typeof e.art === 'string' && hasOwn(art, e.art) ? art[e.art] : null;
+    if (!isObj(a) || fxChecked.has(e.art) || a.w !== ART_SIZES.screen.w || a.h !== ART_SIZES.screen.h) return;
+    fxChecked.add(e.art);
+    const fxs = asArr(a.fx).filter((f) => ART_FX.includes(f));
+    if (!fxs.length || !Array.isArray(a.chars) || !Array.isArray(a.colors)) return;
+    for (let y = reservedTop; y < a.h; y++) {
+      const rowOk = (row) => Array.from(String(row ?? '')).length === a.w;
+      if (!rowOk(a.chars[y]) || !rowOk(a.colors[y]) || (Array.isArray(a.bg) && !rowOk(a.bg[y]))) continue;
+      for (let x = 0; x < a.w; x++) {
+        const c = cellAt(a, x, y);
+        const hit = fxs.find((f) => fxMayChange(f, c));
+        if (hit) {
+          err('L11', `art.${e.art}.chars[${y}]`, `ending art row ${y} is reserved for the ending text, but fx "${hit}" can change cell ${x} (${q(c.ch)})`);
+          break;
+        }
+      }
+    }
+  });
 
   // ---------------------------------------------------------------- L12 room pictures
   for (const [id, room] of Object.entries(rooms)) {

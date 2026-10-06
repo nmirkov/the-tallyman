@@ -13,12 +13,12 @@
 //   static=1              reduced motion: instant text, no blinking, no fx, steady border
 //   storage=off           behave as if localStorage were unavailable (in-memory saves)
 import { createScreen } from './screen.js';
-import { createTerminal } from './terminal.js';
+import { createTerminal, isAnyKeyPress } from './terminal.js';
 import { createAudio } from './audio/index.js';
 import { createDispatcher, THEME_ORDER } from './dispatch.js';
 import { createStorageAdapter, loadSettings } from './storage.js';
 import { drawStatus, borderForNerve, borderAt } from './statusbar.js';
-import { createArtLayer, drawDivider, PICTURE_TOP, PICTURE_ROWS } from './picture.js';
+import { createArtLayer, drawDivider, panelFor, PICTURE_TOP, PICTURE_ROWS } from './picture.js';
 import { createBoot, bootStart } from './boot.js';
 import { createGame } from '../engine/game.js';
 import content from '../content/index.js';
@@ -26,7 +26,8 @@ import content from '../content/index.js';
 const ENDING_PROMPT = 'UNDO, LOAD, RESTART or IMPORT?';
 const PRESS_KEY = '[PRESS ANY KEY]';
 /** Ending-screen rows (TT-021: art rows 0-18, rows 19-24 reserved for the UI). */
-const END_ROWS = Object.freeze({ title: 19, score: 20, rank: 21, region: { top: 22, bottom: 24 } });
+// The command echo does not count towards [MORE] there: two output rows hold a two-line answer.
+const END_ROWS = Object.freeze({ title: 19, score: 20, rank: 21, region: { top: 22, bottom: 24, echoPages: false } });
 /** Terminal colours on the black ending screen: palette keys that read in every theme. */
 const END_COLORS = Object.freeze({
   paper: '0',
@@ -68,8 +69,6 @@ let game = null;
 // | 'end' (ending screen)
 let mode = 'play';
 let boot = null;
-/** A user gesture has happened (audio can play). */
-let gestured = false;
 /** Swallow the click that follows a boot pointerdown (the terminal would read it as a key). */
 let swallowClick = false;
 let endEvent = null;
@@ -86,22 +85,14 @@ const term = createTerminal(screen, {
   onKey: (kind) => { if (KEY_CLICK_KINDS.has(kind)) audio.sfx('key'); },
 });
 
-/** The location picture to show, or null (none, GRAPHICS OFF, or not a 40x9 picture). */
-function panelArt() {
-  if (!pictureEvent.graphics || !pictureEvent.id) return null;
-  const def = content.art?.[pictureEvent.id];
-  return def && def.h === PICTURE_ROWS ? def : null;
-}
-
+/** A9.1: `graphics:false` hides the panel (text gets 23 rows); `id:null` blanks it. */
 function drawPanel() {
-  const def = panelArt();
-  term.setGraphics(!!def);
-  if (def) {
-    picture.set(def);
-    drawDivider(screen);
-  } else {
-    picture.set(null);
-  }
+  const { shown, def } = panelFor(pictureEvent, content.art);
+  term.setGraphics(shown);
+  picture.set(def);
+  if (!shown) return;
+  if (!def) screen.fill({ x: 0, y: PICTURE_TOP, w: screen.cols, h: PICTURE_ROWS }, ' ', null, null);
+  drawDivider(screen);
 }
 
 function drawStatusBar() {
@@ -125,12 +116,6 @@ const centre = (y, text, fg) => {
   screen.print(Math.floor((screen.cols - s.length) / 2), y, s, fg, '0');
 };
 
-function transcriptLine(text) {
-  const p = doc.createElement('p');
-  p.textContent = text;
-  term.transcript.append(p);
-}
-
 /** After the ending text: wait for a key, then show the ending screen. */
 function awaitEnding(ev) {
   endEvent = ev;
@@ -151,11 +136,12 @@ function showEnding() {
   centre(END_ROWS.title, ev.title, '1');
   centre(END_ROWS.score, score, 'f');
   centre(END_ROWS.rank, rank, '7');
-  transcriptLine(`${ev.title}. ${score}. ${rank}.`);
+  term.transcribe(`${ev.title}. ${score}. ${rank}.`);
   term.setColors(END_COLORS);
   term.core.setRegion(END_ROWS.region);
   term.clear();
   term.print(ENDING_PROMPT, 'system');
+  term.clearInput(); // keys typed ahead during the ending text belong to the old screen
   term.setInputEnabled(true);
   term.invalidate();
 }
@@ -181,7 +167,6 @@ function applySetting(key, value) {
     case 'typewriter': term.setTypewriter(value === 'on' && !scripted); break;
     case 'theme':
       screen.setTheme(value);
-      doc.body.style.background = '';
       if (mode === 'play') redrawPlay();
       else term.invalidate();
       break;
@@ -297,6 +282,8 @@ function startGame() {
   drawStatusBar();
   const seed = firstSeed ?? newSeed();
   firstSeed = null;
+  // the terminal was not ticked on the boot / title screen: that time is not typing budget
+  term.core.resetClock();
   newGame(seed);
   const notice = adapter.takeNotice();
   if (notice) term.print(notice, 'system');
@@ -322,8 +309,6 @@ function runBoot(start) {
     titleArt: content.art?.title ?? null,
     start,
     reducedMotion,
-    gestured,
-    music: () => dispatcher.settings.sound === 'on' && dispatcher.settings.music === 'on' && audio.available,
     onStart: startGame,
     now: win.performance.now(),
   });
@@ -337,13 +322,17 @@ function showTitle() {
 
 // ------------------------------------------------------------------ input, audio unlock
 
-const unlock = () => { gestured = true; audio.unlock(); };
+const unlock = () => audio.unlock();
+/** The key that left the title or continued to the ending screen, while held (repeats dropped). */
+let heldKey = null;
 win.addEventListener('keydown', (e) => {
   unlock();
   if (e.key === 'F2') {
     e.preventDefault();
-    const r = dispatcher.setting('sound', 'toggle');
-    if (mode === 'boot') audio.setMuted(r.value === 'off'); // the terminal (and its marks) is paused
+    // in the boot the terminal (its marks and text) is paused and cleared by the start
+    // bundle: apply at once and skip the ack, which would only reach the transcript
+    const r = dispatcher.setting('sound', 'toggle', { ack: mode !== 'boot' });
+    if (mode === 'boot') audio.setMuted(r.value === 'off');
     return;
   }
   if (mode === 'boot') {
@@ -351,16 +340,27 @@ win.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.altKey || e.metaKey || /^F\d+$/.test(e.key)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    if (e.repeat || ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
+    if (!isAnyKeyPress(e)) return;
+    heldKey = e.key; // if this key starts the game, its repeats must not skip the intro
     boot?.key(win.performance.now());
     return;
   }
-  if (mode === 'endWait' && term.ready && !e.ctrlKey && !e.altKey && !e.metaKey) {
+  // repeats of the key that left the title or continued to the ending screen are dropped
+  if (e.repeat && e.key === heldKey) {
     e.preventDefault();
     e.stopImmediatePropagation();
+    return;
+  }
+  // a fresh key only: the repeats of a key held through the ending text must neither
+  // continue nor be typed into the ending prompt
+  if (mode === 'endWait' && term.ready && isAnyKeyPress(e)) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    heldKey = e.key;
     showEnding();
   }
 }, { capture: true });
+win.addEventListener('keyup', (e) => { if (e.key === heldKey) heldKey = null; }, { capture: true });
 win.addEventListener('pointerdown', (e) => {
   unlock();
   if (mode === 'boot') {
@@ -405,7 +405,8 @@ function frame(now) {
     screen.print(0, screen.rows - 1, on ? PRESS_KEY : ' '.repeat(PRESS_KEY.length), 'system', 'bg');
     if (on) for (let x = 0; x < PRESS_KEY.length; x++) screen.invert(x, screen.rows - 1, true);
   }
-  screen.setBorder(mode === 'play' ? borderAt(border, now, reducedMotion) : null);
+  // the ending screen has black paper and a black frame, like the title
+  screen.setBorder(mode === 'play' ? borderAt(border, now, reducedMotion) : mode === 'end' ? '0' : null);
   screen.render();
   win.requestAnimationFrame(frame);
 }
@@ -450,7 +451,7 @@ win.__tallyman = {
   /** Boot phase ('power' ... 'title'), or null once the game runs. */
   get bootPhase() { return boot ? boot.phase : null; },
   /** Press a key on the boot / title screen (tests). */
-  bootKey: () => { gestured = true; boot?.key(win.performance.now()); },
+  bootKey: () => boot?.key(win.performance.now()),
   get scriptDone() { return scriptDone && term.ready; },
   get settings() { return dispatcher.settings; },
   term,

@@ -27,6 +27,20 @@ export function fxTick(now, fps = FX_FPS) {
 }
 
 /**
+ * What the picture panel shows for a `picture` event (A9.1): `graphics:false` hides it
+ * (the text gets 23 rows); otherwise it stays, showing the art, or blank when `id` is null
+ * or names no 40x9 picture, so the layout never jumps between dark and lit rooms.
+ * @param {{id?: string|null, graphics?: boolean}} ev
+ * @param {Record<string, {h: number}>} [art]  content.art
+ * @returns {{shown: boolean, def: object|null}}
+ */
+export function panelFor(ev, art = {}) {
+  if (ev?.graphics === false) return { shown: false, def: null };
+  const def = ev?.id ? art?.[ev.id] : null;
+  return { shown: true, def: def && def.h === PICTURE_ROWS ? def : null };
+}
+
+/**
  * Write every cell of an art def onto the screen from row `top`.
  * @param {{put: Function}} screen
  * @param {object} art

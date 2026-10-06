@@ -72,6 +72,25 @@ export function cellAt(art, x, y) {
   return { ch, fg, bg };
 }
 
+/**
+ * Whether an effect can ever change this (base) cell, at any tick. Static and conservative,
+ * mirroring each effect's cell test below: rain and fog only touch ' ' and '█', lightning
+ * only sky-paper air and edge glyphs, flicker only cells with a dimmable colour. Used by the
+ * content lint to keep the ending screen's reserved rows fx-inert (TT-106).
+ * @param {string} fxId
+ * @param {ArtCell} c
+ * @returns {boolean}
+ */
+export function fxMayChange(fxId, c) {
+  switch (fxId) {
+    case 'rain': return c.ch === ' ' || c.ch === '█';
+    case 'fog': return (c.ch === ' ' && DARK_KEYS.has(c.bg)) || (c.ch === '█' && DARK_KEYS.has(c.fg));
+    case 'lightning': return SKY_KEYS.has(c.bg) && (c.ch === ' ' || EDGE_GLYPHS.has(c.ch));
+    case 'flicker': return Object.hasOwn(FLICKER_RAMP, c.fg) || Object.hasOwn(FLICKER_RAMP, c.bg);
+    default: return true;
+  }
+}
+
 /** A cell lookup over an art def plus already-applied overrides. */
 function viewOf(art, overrides) {
   const over = new Map(overrides.map((o) => [o.y * art.w + o.x, o]));
