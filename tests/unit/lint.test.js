@@ -13,10 +13,10 @@ const LINT = fileURLToPath(new URL('../../tools/lint-content.js', import.meta.ur
 const lint = (content, opts = {}) => lintContent(content, { hasGlyph, ...opts });
 const show = (r) => [...r.errors.map((f) => formatFinding('error', f)), ...r.warnings.map((f) => formatFinding('warning', f))].join('\n');
 
-test('the real content bundle lints without errors, also in strict mode (missing art allowed until R3)', () => {
+test('the real content bundle lints without errors, also in strict mode', () => {
   const r = lint(realContent);
   assert.deepEqual(r.errors, [], show(r));
-  const strict = lint(realContent, { strict: true, allowMissingArt: true });
+  const strict = lint(realContent, { strict: true });
   assert.deepEqual(strict.errors, [], show(strict));
 });
 
