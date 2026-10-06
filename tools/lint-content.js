@@ -1,10 +1,13 @@
 // Content linter (TT-006): rules L01–L23 of docs/ARCHITECTURE.md A13.
 //
-//   node tools/lint-content.js [--strict] [--content path/to/bundle.js]
+//   node tools/lint-content.js [--strict] [--allow-missing-art] [--content path/to/bundle.js]
 //
 // Prints `ERROR Lnn path: message` / `WARN Lnn path: message` lines and exits 1 iff any
 // error. Without --content it lints src/content/index.js (default export). The pure
 // `lintContent(content, options)` is exported for tests.
+//
+// --allow-missing-art (TT-018, until release R3): in --strict mode a room picture whose art
+// is not drawn yet stays a warning (L12) instead of an error; everything else is unchanged.
 
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -17,7 +20,7 @@ import { varProblem, initialCaps } from '../src/engine/state.js';
 
 /**
  * @typedef {{rule: string, path: string, message: string}} Finding
- * @typedef {{strict?: boolean, hasGlyph?: (ch: string) => boolean, verbWords?: string[]}} LintOptions
+ * @typedef {{strict?: boolean, allowMissingArt?: boolean, hasGlyph?: (ch: string) => boolean, verbWords?: string[]}} LintOptions
  */
 
 const ID_RE = new RegExp(ID_PATTERN);
@@ -715,7 +718,7 @@ function runRules(content, options, errors, warnings) {
   for (const [id, room] of Object.entries(rooms)) {
     const p = `rooms.${id}`;
     if (!hasOwn(room, 'picture')) strictly('L12', p, 'no picture');
-    else if (!hasOwn(art, room.picture)) strictly('L12', `${p}.picture`, `art ${q(room.picture)} does not exist (falls back to no picture)`);
+    else if (!hasOwn(art, room.picture)) (options.allowMissingArt ? warn : strictly)('L12', `${p}.picture`, `art ${q(room.picture)} does not exist (falls back to no picture)`);
     else if (isObj(art[room.picture]) && art[room.picture].h !== ART_SIZES.location.h) err('L11', `${p}.picture`, `room art must be ${ART_SIZES.location.w}x${ART_SIZES.location.h}`);
   }
 
@@ -846,6 +849,7 @@ function verbWordsFrom(mod) {
 
 async function main(argv) {
   const strict = argv.includes('--strict');
+  const allowMissingArt = argv.includes('--allow-missing-art');
   const ci = argv.indexOf('--content');
   const target = ci >= 0 ? path.resolve(argv[ci + 1] ?? '') : new URL('../src/content/index.js', import.meta.url);
   const mod = await import(target instanceof URL ? target.href : pathToFileURL(target).href);
@@ -855,7 +859,7 @@ async function main(argv) {
   let verbWords = [];
   try { verbWords = verbWordsFrom(await import('../src/engine/vocab.js')); } catch { verbWords = []; }
 
-  const { errors, warnings } = lintContent(content, { strict, hasGlyph, verbWords });
+  const { errors, warnings } = lintContent(content, { strict, allowMissingArt, hasGlyph, verbWords });
   for (const f of warnings) console.log(formatFinding('warning', f));
   for (const f of errors) console.log(formatFinding('error', f));
   const label = ci >= 0 ? path.relative(process.cwd(), String(target)) : 'src/content';

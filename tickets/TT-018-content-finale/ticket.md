@@ -2,7 +2,7 @@
 id: TT-018
 title: Content: Beneath, finale, endings, beats, hints and scoring
 milestone: M3
-status: in-progress
+status: done
 agent: writer
 model: opus
 depends: [TT-017]

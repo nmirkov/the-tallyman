@@ -10,7 +10,7 @@
     "test": "node --test tests/",
     "lint:content": "node tools/lint-content.js",
     "build": "node tools/build.js",
-    "check": "npm run lint:content && npm run test && npm run build",
+    "check": "npm run lint:content -- --strict --allow-missing-art && npm run test && npm run build",
     "start": "node tools/serve.js",
     "play": "node tools/play.js",
     "progress": "node tools/progress.js",

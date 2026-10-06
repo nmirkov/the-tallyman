@@ -1,13 +1,9 @@
 // Mill zone (docs/STORY.md §4.4): 5 rooms, their items and scenery. Prose verbatim.
-// Variants that need Pike in the Counting Room switch on with TT-018's rooms (stubs.js).
 
 import { CUT_CHAIN, OIL_HATCH, TRAP } from '../shared.js';
-import { ready } from '../stubs.js';
 
-/** Pike is down in the Counting Room (only possible once TT-018 adds it). */
+/** Pike is down in the Counting Room, his trap bolted from beneath. */
 const PIKE_BELOW = { at: ['pike', 'counting_room'] };
-/** Text variants that name the Counting Room, kept only once it is transcribed. */
-const whenPikeBelow = (text) => (ready('counting_room') ? [{ if: PIKE_BELOW, text }] : []);
 
 /* ------------------------------------------------------------------------ *
  *  Item-local named reactions (STORY §5.2)                                  *
@@ -78,7 +74,7 @@ export const rooms = {
   counting_house: {
     name: 'Counting House', zone: 'mill', picture: 'counting_house', nerve: 1,
     desc: [
-      ...whenPikeBelow('The counting house: high desks, barred wages windows, the smell of ink and mice. On the tallest desk lies a great ledger bound in black. The iron trap in the floor has lost its padlock; it is bolted from beneath. The yard is south.'),
+      { if: PIKE_BELOW, text: 'The counting house: high desks, barred wages windows, the smell of ink and mice. On the tallest desk lies a great ledger bound in black. The iron trap in the floor has lost its padlock; it is bolted from beneath. The yard is south.' },
       { text: 'The counting house: high desks, barred wages windows, the smell of ink and mice. On the tallest desk lies a great ledger bound in black. An iron trap is set in the floor, padlocked. The yard is south.' },
     ],
     exits: { s: 'mill_yard' },
@@ -152,15 +148,15 @@ export const items = {
   iron_trap: {
     name: 'iron trap', names: ['trap', 'trapdoor', 'iron trap'], adjectives: ['iron', 'floor'], location: 'counting_house', scenery: true,
     desc: [
-      ...whenPikeBelow("The iron trap, its padlock gone. Bolted from beneath. Pike's door is shut behind him."),
+      { if: PIKE_BELOW, text: "The iron trap, its padlock gone. Bolted from beneath. Pike's door is shut behind him." },
       { text: 'An iron trap two feet square, a squat disc padlock through the hasp. The steel round the keyhole is bright with use. Someone comes and goes here, often.' },
     ],
     before: { open: TRAP, unlock: TRAP, cut: TRAP, break: TRAP, pry: TRAP, pull: TRAP },
   },
-  // A door between the boiler room and the tunnel (STORY §3.3); the tunnel side lands with TT-018.
+  // A door between the boiler room and the tunnel (STORY §3.3).
   boiler_hatch: {
     name: 'hatch', names: ['hatch', 'boiler hatch', 'manhole'], adjectives: ['round', 'iron', 'boiler', 'rusty'],
-    location: 'boiler_room', ...(ready('tunnel') ? { alsoIn: ['tunnel'] } : {}),
+    location: 'boiler_room', alsoIn: ['tunnel'],
     fixed: true, openable: true, open: false,
     desc: [
       { if: { open: 'boiler_hatch' }, text: 'The round iron hatch, open, a ladder going down.' },

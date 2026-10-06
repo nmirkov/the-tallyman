@@ -1,9 +1,4 @@
 // ACCUSE machinery and hazards (docs/STORY.md §8.1, §8.6; A14.1 rules 2-5, A14.3).
-// Variants that name rooms of later zones switch on when those rooms land (stubs.js).
-
-import { ready } from './stubs.js';
-
-const WEAK_IN_COUNTING_ROOM = { if: { in: 'counting_room' }, nerve: 15, say: '"Prove it," says Pike, and smiles, and goes on counting.' };
 
 export const caseDef = {
   culprit: 'pike',
@@ -23,7 +18,7 @@ export const caseDef = {
     },
   ],
   weak: [
-    ...(ready('counting_room') ? [WEAK_IN_COUNTING_ROOM] : []),
+    { if: { in: 'counting_room' }, nerve: 15, say: '"Prove it," says Pike, and smiles, and goes on counting.' },
     { nerve: 15, say: 'Pike laughs - a big easy laugh with nothing behind it. "Me? On what, Sergeant? A feeling?" He leans across the counter. "Come back when you\'ve got something you can count."' },
   ],
   wrong: [
@@ -43,10 +38,8 @@ export const hazards = {
     room: 'lock', verbs: ['swim', 'enter', 'jump'], objects: ['lock_water'], ending: 'death_drown',
     warn: 'You stand at the edge of the lock and look down into ten feet of black, churning water. If you went in there you would not come out. (If it is the cottage you want, it is NORTH.)',
   },
-  ...(ready('quarry_edge') ? {
-    quarry: {
-      room: 'quarry_edge', exit: 'd', unless: { carried: 'rope' }, ending: 'death_fall',
-      warn: 'You look over the edge. Sixty feet of wet rock down to black water, and not a handhold you would trust. Without a rope you would never make it down alive.',
-    },
-  } : {}),
+  quarry: {
+    room: 'quarry_edge', exit: 'd', unless: { carried: 'rope' }, ending: 'death_fall',
+    warn: 'You look over the edge. Sixty feet of wet rock down to black water, and not a handhold you would trust. Without a rope you would never make it down alive.',
+  },
 };

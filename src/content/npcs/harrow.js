@@ -1,13 +1,11 @@
 // DI Frank Harrow, your partner (docs/STORY.md §2.2, §6.6). Chained in the Counting Room
-// from the start; never moves. Until TT-018 adds that room he is declared with
-// `location: null` (an NPC may not stand in a stub, lint L14) - still a valid topic.
+// from the start; never moves.
 
 import { CUT_CHAINS } from '../shared.js';
-import { ready } from '../stubs.js';
 
 export const harrow = {
   name: 'Harrow', names: ['harrow', 'frank', 'frank harrow', 'inspector', 'di', 'partner'], proper: true,
-  location: ready('counting_room') ? 'counting_room' : null,
+  location: 'counting_room',
   here: [
     { if: { var: 'harrowFreed', eq: true }, text: 'Frank Harrow sits against the wall, one hand pressed to his side.' },
     { text: 'DI Frank Harrow hangs in chains from the wall, his shirt dark at the side.' },

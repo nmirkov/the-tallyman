@@ -1,8 +1,7 @@
 // PC Arthur Pike, the constable (docs/STORY.md §2.1, §6.3, §8.2). At the Police House
-// desk until he flees (ACCUSE) or leaves on his schedule; then the Counting Room (TT-018).
+// desk until he flees (ACCUSE) or leaves on his schedule; then the Counting Room.
 
 import { ARREST_PIKE } from '../shared.js';
-import { ready } from '../stubs.js';
 
 /** The Counting Room voice: fires only there, so the desk topics are untouched. */
 const COUNTING_VOICE = [
@@ -33,8 +32,9 @@ export const pike = {
   ],
   talk: '"Now then, Sergeant. Cup of tea? You look perished. Mr Harrow, is it? He\'ll turn up. They always turn up."',
   before: {
-    // The voice names the Counting Room, so it switches on with TT-018's rooms.
-    ...(ready('counting_room') ? { ask: COUNTING_VOICE, tell: COUNTING_VOICE, talk: COUNTING_VOICE } : {}),
+    ask: COUNTING_VOICE,
+    tell: COUNTING_VOICE,
+    talk: COUNTING_VOICE,
     arrest: ARREST_PIKE,
     attack: [
       { if: { var: 'pikeState', eq: 'restrained' }, say: 'He is cuffed and on his knees. That isn\'t who you are.' },

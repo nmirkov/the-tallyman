@@ -4,7 +4,7 @@
 //   rules.js       meta, rules (intro, money, nerve), zones, help        STORY §1, §3.1
 //   registries.js  evidence, notes, vars, flag list, scoring / ranks     STORY §7.5, §11
 //   shared.js      named shared reactions                                STORY §7.3
-//   zones/*.js     rooms + their items and scenery, one file per zone    STORY §4, §5
+//   zones/*.js     rooms + their items and scenery, one file per zone    STORY §4, §5, §8.3-8.5
 //   npcs/*.js      one file per NPC                                      STORY §2, §6
 //   topics.js      ASK / TELL keywords                                   STORY §6.1
 //   verbs.js       content verbs and synonyms                            STORY §7.4
@@ -12,7 +12,6 @@
 //   endings.js     endings                                               STORY §8.7
 //   beats.js       scripted beats and story daemons                      STORY §8.4, §9
 //   hints.js       hint steps                                            STORY §10
-//   stubs.js       rooms / items of zones not yet transcribed (incremental builds, A13 L14)
 //   art/index.js   pictures - owned by the artist tickets (TT-019...TT-021), optional here
 
 import { meta, rules, zones, help } from './rules.js';
@@ -23,12 +22,12 @@ import { caseDef, hazards } from './case.js';
 import { endings } from './endings.js';
 import { beats, daemons } from './beats.js';
 import { hints } from './hints.js';
-import { stubs, itemStubs } from './stubs.js';
 import * as town from './zones/town.js';
 import * as canal from './zones/canal.js';
 import * as moor from './zones/moor.js';
 import * as mill from './zones/mill.js';
 import * as asylum from './zones/asylum.js';
+import * as beneath from './zones/beneath.js';
 import { maggie } from './npcs/maggie.js';
 import { pike } from './npcs/pike.js';
 import { ashdown } from './npcs/ashdown.js';
@@ -37,7 +36,7 @@ import { harrow } from './npcs/harrow.js';
 
 /**
  * Item content order = STORY §5.1 table order (it drives room listings, A8.4, and the
- * item-before-NPC topic match, A4.9). Ids not defined yet are skipped.
+ * item-before-NPC topic match, A4.9).
  */
 export const ITEM_ORDER = Object.freeze([
   'warrant_card', 'wallet', 'torch', 'bench', 'coin', 'payphone', 'batteries', 'room_key', 'harrows_door', 'whisky',
@@ -47,12 +46,12 @@ export const ITEM_ORDER = Object.freeze([
   'boiler_hatch', 'cabinet', 'patient_file', 'drawer_four', 'drawers', 'chains',
 ]);
 
-const ZONE_MODULES = [town, canal, moor, mill, asylum];
+const ZONE_MODULES = [town, canal, moor, mill, asylum, beneath];
 
-/** Merges zone items (and item stubs) into one table in ITEM_ORDER; throws on duplicates. */
+/** Merges zone items into one table in ITEM_ORDER; throws on duplicates. */
 function orderedItems() {
   const all = {};
-  for (const table of [...ZONE_MODULES.map((z) => z.items), itemStubs]) {
+  for (const table of ZONE_MODULES.map((z) => z.items)) {
     for (const [id, item] of Object.entries(table)) {
       if (Object.hasOwn(all, id)) throw new Error(`content: item "${id}" is defined twice`);
       all[id] = item;
@@ -109,7 +108,6 @@ export const content = {
   verbs,
   help,
   art,
-  stubs,
 };
 
 export default content;

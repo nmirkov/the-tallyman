@@ -1,7 +1,5 @@
 // Bundle metadata, rules, zones and HELP (docs/STORY.md §1.6, §1.7, §3.1; A14.3).
 
-import { ready } from './stubs.js';
-
 export const meta = { id: 'tallyman', title: 'The Tallyman', version: '0.1.0' };
 
 /** STORY §1.6 (`rules.intro`). */
@@ -31,7 +29,7 @@ export const rules = {
 };
 
 /** STORY §3.1, transcribed literally. */
-const ZONES = {
+export const zones = {
   town: {
     name: 'Town', safeRoom: 'market_square', ambient: 'rain',
     panicText: 'Your nerve goes. You run - blind, splashing, not caring where - and stop only when the orange lamps of Market Square close round you.',
@@ -57,17 +55,6 @@ const ZONES = {
     capText: "Your heart hammers, but Harrow's voice holds you here.",
   },
 };
-
-/**
- * Incremental builds: a zone whose safe room is still a stub cannot name it (lint L14),
- * so it is declared without one and with `panic: false` until its rooms land. The player
- * can never stand in a stub, so this changes nothing in play.
- */
-export const zones = Object.fromEntries(Object.entries(ZONES).map(([id, z]) => {
-  if (z.safeRoom === undefined || ready(z.safeRoom)) return [id, z];
-  const { safeRoom, ...rest } = z;
-  return [id, { ...rest, panic: false }];
-}));
 
 /** STORY §1.7 (`help`). */
 export const help = [

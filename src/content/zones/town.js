@@ -4,7 +4,6 @@
 // for the few mechanical deviations.
 
 import { CALL_HQ, LOAD_TORCH } from '../shared.js';
-import { ready } from '../stubs.js';
 
 /* ------------------------------------------------------------------------ *
  *  Item-local named reactions (STORY §5.2)                                  *
@@ -317,7 +316,7 @@ export const items = {
     before: {
       turn_on: { if: [{ carried: 'batteries' }, '!torch_loaded'], say: '(First you load the fresh batteries.)', move: { batteries: null }, setFlag: 'torch_loaded', continue: true },
       // The warning names the Counting Room, so it switches on with TT-018's rooms.
-      ...(ready('counting_room') ? { turn_off: TORCH_OFF_WARNING } : {}),
+      turn_off: TORCH_OFF_WARNING,
     },
   },
   bench: {

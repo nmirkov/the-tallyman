@@ -1,12 +1,11 @@
 // TT-017 — the real content, Moor, Mill and Asylum zones (docs/STORY.md §4.3–4.5, §5, §7,
 // §8.6, §9, §10, §12). Asserts the §12.1 / §12.2 rows in these zones, the §7.2 phrasings,
-// the quarry hazard, both hatches and the once-only room beats. The tunnel and the Counting
-// Room are still stubs (TT-018): going down either hatch keeps you where you are.
+// the quarry hazard, both hatches and the once-only room beats. Going down either hatch
+// reaches the tunnel (TT-018); the finale itself is tested in walkthrough-smoke / beneath.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import content from '../../src/content/index.js';
-import { stubs, itemStubs } from '../../src/content/stubs.js';
 import { newGame, texts, setup } from '../fixtures/harness.js';
 
 const STORY = readFileSync(new URL('../../docs/STORY.md', import.meta.url), 'utf8');
@@ -49,14 +48,13 @@ const run = (...lines) => {
  * ------------------------------------------------------------------------ */
 
 describe('bundle', () => {
-  test('Moor has 6 rooms, Mill 5, Asylum 6; only the two Beneath rooms are still stubs', () => {
+  test('Moor has 6 rooms, Mill 5, Asylum 6; no stubs remain', () => {
     const byZone = (z) => Object.keys(content.rooms).filter((id) => content.rooms[id].zone === z);
     assert.deepEqual(byZone('moor'), ['moor_road', 'harrows_car', 'tally_stone', 'quarry_edge', 'quarry_hut', 'quarry_floor']);
     assert.deepEqual(byZone('mill'), ['mill_gates', 'mill_yard', 'weaving_shed', 'counting_house', 'boiler_room']);
     assert.deepEqual(byZone('asylum'), ['asylum_gates', 'coal_chute', 'entrance_hall', 'records_office', 'ward', 'morgue']);
-    assert.deepEqual(Object.keys(stubs), ['tunnel', 'counting_room']);
-    assert.deepEqual(Object.keys(itemStubs), ['chains']);
-    assert.equal(Object.keys(content.rooms).length, 40);
+    assert.equal(content.stubs, undefined);
+    assert.equal(Object.keys(content.rooms).length, 42);
   });
 
   test('the dark rooms are the weaving shed, boiler room, ward and morgue', () => {
@@ -86,7 +84,7 @@ describe('bundle', () => {
     const beat = (id) => content.beats.find((b) => b.id === id);
     assert.ok(beat('fog_figure'));
     assert.ok(beat('stone_girl'));
-    assert.deepEqual(beat('counting_dark').when.in, ['crypt', 'weaving_shed', 'boiler_room', 'ward', 'morgue']);
+    assert.deepEqual(beat('counting_dark').when.in, ['crypt', 'weaving_shed', 'boiler_room', 'ward', 'morgue', 'tunnel']);
   });
 });
 
@@ -147,8 +145,12 @@ describe('STORY §12.1 walkthrough, commands 51-88', () => {
     ['entrance_hall', 80],
     ['morgue', 80, (s, t) => { assert.match(t, /Drawer 4 does not sit flush with the rest\./); assert.match(t, /Exits: up\./); }],
     ['morgue', 80, (s, t, ev) => { assert.equal(s.flags.morgue_hatch_found, true); assert.ok(sfx(ev, 'creak')); assert.match(t, /iron rungs drop into a square hatch/); }],
-    // 88: D into the tunnel - still a stub until TT-018, so you stay put.
-    ['morgue', 80],
+    // 88: D into the tunnel; Pike has been below since turn 68, so the iron door is ajar.
+    ['tunnel', 80, (s, t, ev) => {
+      assert.match(t, /North, the iron door stands ajar/);
+      assert.equal(s.flags.tunnel_music, true);
+      assert.ok(ev.some((e) => e.type === 'music' && e.id === 'dread'));
+    }],
   ];
   ROWS.forEach(([room, score, check], i) => {
     const k = 51 + i;
@@ -186,8 +188,8 @@ describe('STORY §12.2 boiler-room route, commands 84-99', () => {
     ['d', 'boiler_room', (s, t) => { assert.match(t, /In the floor between the boilers is a round iron hatch, rusted to its rim\./); assert.match(t, /Exits: up, down\./); }],
     ['oil hatch', 'boiler_room', (s, t) => { assert.equal(s.flags.hatch_oiled, true); assert.match(t, /The rust drinks it\./); }],
     ['open hatch', 'boiler_room', (s, t, ev) => { assert.equal(s.items.boiler_hatch.open, true); assert.ok(sfx(ev, 'hatch')); }],
-    // 99: D into the tunnel - a stub until TT-018.
-    ['d', 'boiler_room'],
+    // 99: D into the tunnel, up the ladder from the boiler-room side.
+    ['d', 'tunnel', (s, t) => { assert.match(t, /North, the iron door stands ajar/); assert.match(t, /You can see a hatch here\./); }],
   ];
   ROWS.forEach(([line, room, check], i) => {
     const k = 84 + i;
@@ -425,14 +427,16 @@ describe('the morgue hatch', () => {
 
   // Msg E's "Not without a light." is transcribed but unreachable: the morgue is dark, so
   // without the torch on the hidden exit's `if` is false and A8.3 refuses it as darkness.
-  test('down needs the torch on; with it on you reach the tunnel stub and stay', () => {
+  test('down needs the torch on; with it on you reach the tunnel', () => {
     const g = game();
     at(g, 'morgue', (s) => { lit(s); s.flags.morgue_hatch_found = true; s.prevRoomId = 'entrance_hall'; });
-    assert.equal(say(g, 'd'), "This part of Blackmere isn't built yet. You turn back.");
-    assert.equal(snap(g).roomId, 'morgue');
     say(g, 'turn off torch');
     assert.equal(say(g, 'd'), 'You blunder about in the dark but find no way through.');
     assert.equal(snap(g).roomId, 'morgue');
+    say(g, 'turn on torch');
+    assert.match(say(g, 'd'), /^Tunnel\n/);
+    assert.equal(snap(g).roomId, 'tunnel');
+    assert.match(say(g, 's'), /^Morgue\n/);
   });
 });
 

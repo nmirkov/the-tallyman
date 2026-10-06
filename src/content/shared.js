@@ -3,8 +3,6 @@
 // Item-local named reactions (HARROWS_DOOR, SHED, READ_REGISTER, MOVE_STONE, ...) live
 // with their items in the zone files.
 
-import { ready } from './stubs.js';
-
 /** CALL HQ from the phone box: needs the 10p; once only (+5 `phone_call`). */
 export const CALL_HQ = [
   { if: 'phoned', say: '"Look, Sarge, I\'ve told you everything we\'ve got." The line goes dead.' },
@@ -100,11 +98,8 @@ export const MOVE_DRAWER = [
   },
 ];
 
-/**
- * Pike's iron trap in the counting-house floor: never opens. The "bolted from beneath"
- * line needs Pike in the Counting Room, so it switches on with TT-018's rooms (stubs.js).
- */
+/** Pike's iron trap in the counting-house floor: never opens. */
 export const TRAP = [
-  ...(ready('counting_room') ? [{ if: { at: ['pike', 'counting_room'] }, say: 'Bolted from beneath. It does not give a fraction.' }] : []),
+  { if: { at: ['pike', 'counting_room'] }, say: 'Bolted from beneath. It does not give a fraction.' },
   "A disc padlock: no shackle for cutters to bite on, no gap for a crowbar. Pike's lock, Pike's key. There'll be another way down - there always is, in a mill.",
 ];

@@ -8,7 +8,6 @@ import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import content, { ITEM_ORDER } from '../../src/content/index.js';
-import { stubs } from '../../src/content/stubs.js';
 import { FLAGS } from '../../src/content/registries.js';
 import { lintContent, formatFinding } from '../../tools/lint-content.js';
 import { hasGlyph } from '../../src/ui/font8x8.js';
@@ -49,16 +48,19 @@ describe('bundle', () => {
     assert.deepEqual(r.errors, [], show(r));
   });
 
-  test('lint --strict fails only on stubs and missing pictures', () => {
+  test('lint --strict fails only on missing pictures (none with --allow-missing-art)', () => {
     const rules = new Set(lint({ strict: true }).errors.map((f) => f.rule));
-    for (const rule of rules) assert.ok(['L12', 'L14'].includes(rule), `unexpected strict error ${rule}`);
+    for (const rule of rules) assert.ok(['L12'].includes(rule), `unexpected strict error ${rule}`);
+    const r = lint({ strict: true, allowMissingArt: true });
+    assert.deepEqual(r.errors, [], show(r));
   });
 
-  test('Town has 18 rooms, Canal 5; rooms + stubs make STORY\'s 42', () => {
+  test('Town has 18 rooms, Canal 5; STORY\'s 42 rooms in all, no stubs', () => {
     const byZone = (z) => Object.values(content.rooms).filter((r) => r.zone === z).length;
     assert.equal(byZone('town'), 18);
     assert.equal(byZone('canal'), 5);
-    assert.equal(Object.keys(content.rooms).length + Object.keys(stubs).length, 42);
+    assert.equal(Object.keys(content.rooms).length, 42);
+    assert.equal(content.stubs, undefined);
   });
 
   test('items follow STORY §5.1 order; NPCs are proper and in STORY §6 order', () => {
@@ -487,7 +489,7 @@ describe('gates and refusals', () => {
     assert.equal(snap(g).items.coin.loc, null);
   });
 
-  test('the towpath leads west to the mill gates (a stub until TT-017)', () => {
+  test('the towpath leads west to the mill gates', () => {
     const g = game();
     at(g, 'towpath');
     say(g, 'w');
