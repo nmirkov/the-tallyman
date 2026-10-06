@@ -100,8 +100,9 @@ export const daemons = [
         },
         { if: [{ lit: true }, { var: 'attack', eq: 3 }], style: 'alert', say: '"Three," says Pike, and takes a step closer. Behind him Harrow is trying to say something. Do something.' },
         { if: [{ lit: true }, { var: 'attack', eq: 2 }], style: 'alert', say: 'He circles, knife low. "One," he says, matching your steps. "Two."' },
-        { if: [{ lit: false }, { var: 'attack', gte: 2 }], sfx: 'scream', end: 'death_pike' },
-        { if: [{ lit: false }, { var: 'attack', eq: 1 }], style: 'alert', say: 'In the dark the counting is suddenly very close. "One..." Light. You need light, now.' },
+        // Dark: warned once (the TURN OFF warning or this one), then fatal (STORY §8.4, TT-121).
+        { if: [{ lit: false }, { var: 'attack', gte: 2 }, 'dark_warned'], sfx: 'scream', end: 'death_pike' },
+        { if: { lit: false }, setFlag: 'dark_warned', style: 'alert', say: 'In the dark the counting is suddenly very close. "One..." Light. You need light, now.' },
       ],
     },
   },

@@ -2,7 +2,7 @@
 id: TT-120
 title: Torch or batteries dropped in a dark room can never be picked up again (game unwinnable)
 milestone: BUG
-status: todo
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-022]

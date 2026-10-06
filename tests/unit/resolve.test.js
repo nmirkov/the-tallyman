@@ -285,7 +285,8 @@ test('not in scope → notHere; unlit room → tooDark; verb notHere override', 
   assert.deepEqual(R(s, 'x pike'), err('notHere'));
   assert.deepEqual(R(s, 'accuse pike'), { ok: false, message: 'notHere', params: {}, text: 'Accuse who? They\'re not here.' });
   const c = fresh('cellar');
-  assert.deepEqual(R(c, 'take key'), err('tooDark'));
+  assert.deepEqual(R(c, 'x key'), err('tooDark'));
+  assert.deepEqual(R(c, 'take pike'), err('tooDark'), 'groping (C38) only extends TAKE to loose items on the floor');
   place(c, 'torch', 'player');
   assert.equal(R(c, 'x torch').command.dobj, 'torch', 'carried items are in scope in the dark');
   c.items.torch.lit = true;
@@ -378,7 +379,12 @@ test('TAKE ALL: portable, non-hidden items lying in the room, content order, all
   assert.deepEqual(R(s, 'nick all').command, { verb: 'take', verbWord: 'nick', dobj: ['torch', 'satchel', 'helmet'], all: true, raw: 'nick all' });
   assert.deepEqual(R(fresh('back_room'), 'take all'), err('allNothing', { verbWord: 'take' }), 'fixed, scenery and supporters\' contents excluded');
   assert.deepEqual(R(fresh('square'), 'take all'), err('allNothing', { verbWord: 'take' }));
-  assert.deepEqual(R(fresh('cellar'), 'take all'), err('allNothing', { verbWord: 'take' }), 'unlit: nothing visible');
+  assert.deepEqual(R(fresh('cellar'), 'take all').command.dobj, ['iron_key'], 'unlit: loose items on the floor are found by touch (C38)');
+  const dark = fresh('cellar');
+  place(dark, 'iron_key', 'satchel');
+  place(dark, 'satchel', 'cellar');
+  dark.items.satchel.open = true;
+  assert.deepEqual(R(dark, 'take all').command.dobj, ['satchel'], 'unlit: container contents are not felt');
 });
 
 test('ALL EXCEPT: phrases resolved in the same scope and removed', () => {

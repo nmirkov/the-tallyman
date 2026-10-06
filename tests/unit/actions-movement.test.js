@@ -187,3 +187,37 @@ test('the cellar onEnter fires when lit on entry', () => {
   assert.equal(t[0], 'Cellar');
   assert.ok(t.includes('Your light catches the glint of old bottles.'));
 });
+
+/* ---------------------------------- TT-121: the way back is retraced by feel (A8.3, C39) */
+
+test('darkness rule: the way back ignores its `if` and `hidden` (you just came through it)', () => {
+  const g = newGame();
+  setup(g, (s) => {
+    s.roomId = 'cellar'; s.prevRoomId = 'back_room'; s.visited.push('cellar', 'back_room');
+    delete s.flags.trapdoor_open;
+  });
+  assert.deepEqual(texts(g.input('u')), [MESSAGES.darkMove], 'not the way back');
+  g.input('n');
+  assert.equal(room(g), 'back_room', 'the hidden, conditional trapdoor back is retraced by feel');
+});
+
+test('darkness rule: a lit room keeps every exit condition', () => {
+  const g = newGame();
+  setup(g, (s) => {
+    s.roomId = 'cellar'; s.prevRoomId = 'back_room'; s.visited.push('cellar', 'back_room');
+    s.items.torch.loc = 'player'; s.items.torch.lit = true;
+  });
+  assert.deepEqual(texts(g.input('n')), [MESSAGES.cantGo], 'hidden and closed while lit');
+  g.input('u');
+  assert.equal(room(g), 'alley');
+});
+
+test('darkness rule: a closed door on the way back counts as no way back (every exit allowed)', () => {
+  const content = cloneContent(mini);
+  content.rooms.cellar = { ...content.rooms.cellar, exits: { ...content.rooms.cellar.exits, w: { to: 'pub', door: 'oak_door' } } };
+  const g = newGame(content);
+  setup(g, (s) => { s.roomId = 'cellar'; s.prevRoomId = 'pub'; s.visited.push('cellar'); s.items.oak_door.open = false; });
+  assert.deepEqual(texts(g.input('w')), ['The oak door is closed.']);
+  g.input('u');
+  assert.equal(room(g), 'alley', 'not trapped behind a door you cannot see to open');
+});

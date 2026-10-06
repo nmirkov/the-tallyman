@@ -343,7 +343,7 @@ Notation: `dir: target` ; conditions in `{ }` use Cond syntax; `msg` is the bloc
 | `station_road` | n: market_square ; e: canal_bridge ; s: platform |
 | `market_square` | n: high_street ; e: police_house ; s: station_road ; w: black_lamb ; in: phone_box |
 | `phone_box` | out: market_square |
-| `black_lamb` | e: market_square ; u: harrows_room {if: {carried: 'room_key'}, msg A} |
+| `black_lamb` | e: market_square ; u: harrows_room {if: {any: [{carried: 'room_key'}, 'entered_harrows_room']}, msg A} |
 | `harrows_room` | d: black_lamb |
 | `police_house` | e: cells ; w: market_square |
 | `cells` | w: police_house |
@@ -364,7 +364,7 @@ Notation: `dir: target` ; conditions in `{ }` use Cond syntax; `msg` is the bloc
 | `moor_road` | n: tally_stone ; s: high_street ; in: harrows_car |
 | `harrows_car` | out: moor_road |
 | `tally_stone` | n: asylum_gates ; e: quarry_edge ; s: moor_road |
-| `quarry_edge` | w: tally_stone ; d: quarry_floor (hazard `quarry` unless rope carried) ; in: quarry_hut |
+| `quarry_edge` | w: tally_stone ; d: quarry_floor (hazard `quarry` unless rope carried or `climbed_down`) ; in: quarry_hut |
 | `quarry_hut` | out: quarry_edge |
 | `quarry_floor` | u: quarry_edge |
 | `mill_gates` | n: mill_yard {if: 'mill_chain_cut', msg C} ; e: towpath ; in: mill_yard {same if, msg C} |
@@ -378,7 +378,7 @@ Notation: `dir: target` ; conditions in `{ }` use Cond syntax; `msg` is the bloc
 | `records_office` | e: entrance_hall |
 | `ward` | w: entrance_hall |
 | `morgue` | u: entrance_hall ; d: tunnel {if: ['morgue_hatch_found', {on: 'torch'}], hidden: true, msg E} |
-| `tunnel` | n: counting_room {if: [{at: ['pike', 'counting_room']}, {lit: true}], msg F} ; s: morgue ; u: boiler_room {door: 'boiler_hatch'} |
+| `tunnel` | n: counting_room {if: [{at: ['pike', 'counting_room']}, {carried: 'torch'}, {lit: true}], msg F} ; s: morgue ; u: boiler_room {door: 'boiler_hatch'} |
 | `counting_room` | s: tunnel |
 
 Blocked-exit messages:
@@ -388,10 +388,14 @@ Blocked-exit messages:
 - **D** (`boiler_room` d): `"Not without a light."` (the door check - hatch closed: engine "The hatch is closed." - applies after the `if`)
 - **E** (`morgue` d): variants `[{ if: '!morgue_hatch_found', text: "You can't go that way." }, { text: 'Not without a light.' }]`
 - **F** (`tunnel` n): variants
-  `[{ if: { at: ['pike', 'counting_room'] }, text: 'Into a room with Pike in it, in the dark? Not a chance. Turn your torch on.' }, { if: { turnGte: 180 }, text: "The iron door is barred from the other side. Beyond it, Harrow is praying - slower now, losing his place." }, { text: 'The iron door is barred from the other side. Beyond it, Harrow is praying.' }]`
-  (The `{lit: true}` clause means the Counting Room is only ever entered with a light, so the
-  attack counter's dark branch is reached only by switching the torch off inside, which is warned
-  first: `torch.before.turn_off`, §5.2.)
+  `[{ if: [PIKE_BELOW, { var: 'pikeState', eq: 'counting' }, { carried: 'torch' }], text: 'Into a room with Pike in it, in the dark? Not a chance. Turn your torch on.' }, { if: [PIKE_BELOW, { var: 'pikeState', eq: 'counting' }], text: 'Into a room with Pike in it, without your torch in your hand? Not a chance.' }, { if: [PIKE_BELOW, { carried: 'torch' }], text: 'Not in the dark. Not with Pike in there, cuffs or no cuffs. Turn your torch on.' }, { if: PIKE_BELOW, text: 'Not in the dark. Not with Pike in there, cuffs or no cuffs. Bring your torch.' }, { if: { turnGte: 180 }, text: "The iron door is barred from the other side. Beyond it, Harrow is praying - slower now, losing his place." }, { text: 'The iron door is barred from the other side. Beyond it, Harrow is praying.' }]`
+  (`PIKE_BELOW` = `{ at: ['pike', 'counting_room'] }`.) The `{carried: 'torch'}` + `{lit: true}` clause
+  means the Counting Room is only ever entered *through this exit* with a light in the player's
+  hand: a torch left burning on the tunnel floor lights the tunnel, not the room beyond (TT-122).
+  The only other way in is the darkness rule's way back (A8.3 step 4, A17 C39): a player who
+  walked out of the Counting Room into a dark tunnel can always feel their way back in, which is
+  what keeps a torch left in there retrievable (TT-121). Entering the room dark that way with Pike
+  still counting is covered by the attack counter's own warning (§8.4: warned once, then fatal).
 
 **Why the iron door opens (PLAN R3 note).** The beam that bars it lies on the Counting Room
 side. Pike himself comes and goes by his own trap in the counting-house floor (padlocked,
@@ -402,9 +406,15 @@ moor, and a man who counts everything counts his exits. The tunnel description s
 a way out").
 
 **Darkness note.** The seven dark rooms are `crypt`, `weaving_shed`, `boiler_room`, `ward`,
-`morgue`, `tunnel`, `counting_room`. In each, the way back to `prevRoomId` always exists (A8.3
-step 4), so darkness never traps the player. The two exits into Beneath additionally refuse
-entry without a lit torch (PLAN §2.2 #1 "Not without a light.").
+`morgue`, `tunnel`, `counting_room`. In each, the way back to `prevRoomId` always exists and is
+always open in the dark - its `if` is not checked, you are retracing your own steps by feel
+(A8.3 step 4, A17 C39) - so darkness never traps the player. The two exits into Beneath
+additionally refuse entry without a lit torch (PLAN §2.2 #1 "Not without a light.") when you
+come at them from the lit side. Anything dropped in the dark can be found again by touch: TAKE
+finds loose items lying on the floor of an unlit room by name ("You fumble about in the dark
+until your hand closes on the torch."), and SEARCH in the dark names them (A8.1 / A8.6, A17 C38).
+No portable item starts loose in a dark room, so groping only ever finds what the player put
+there.
 
 ---
 
@@ -497,7 +507,9 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `pouch, handcuff pouch, belt` -> "Black leather, police issue, empty. Wherever Frank went, his handcuffs went too."
   - `chair` -> "A hard chair. His jacket on it."
   - `ashtray, ends, embassy` -> "Six. Frank smokes when he is close to something."
-- onEnter: `{ if: '!entered_harrows_room', setFlag: 'entered_harrows_room', say: "You let yourself in with Maggie's key.", award: 'harrows_room' }`
+- onEnter: `{ if: '!entered_harrows_room', setFlag: 'entered_harrows_room', say: "You let yourself in with Maggie's key. You leave the door on the latch.", award: 'harrows_room' }`
+  (On the latch: from then on the `black_lamb` u exit no longer needs the key, so dropping it up
+  here can never lock you out - TT-123, §13.)
 - picture brief: small room, window right with blue rain streaks and a black moor silhouette, bed left with pink spread, brown suitcase on it, chair with jacket centre. fx `rain` (in the window cells only is fine).
 
 #### `police_house` - Police House
@@ -730,8 +742,10 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `face, drop, quarry` -> "Sixty feet of wet gritstone. Without a rope you'd never make it down alive."
   - `water, spoil, heaps` -> "Black water at the bottom, grey spoil around it. A ring of stones by a boulder - somebody's fire."
   - `winch post, post, winch` -> "An iron post sunk in concrete. You could tie a rope to that."
+  - `goat track, path` -> variants `[{ if: 'climbed_down', text: 'The top of the goat track, hidden in the bracken at the lip. From up here you would never have found it.' }, { text: 'No way down that you can see. Not without a rope.' }]`
   - `hut, tin hut` -> "Corrugated tin, door hanging off. IN to go inside."
-- hazard `quarry` (§8.6): `exit: 'd'`, `unless: { carried: 'rope' }`.
+- hazard `quarry` (§8.6): `exit: 'd'`, `unless: { any: [{ carried: 'rope' }, 'climbed_down'] }` - once you
+  have been down and come back up the goat track, you know where it starts (TT-123, §13).
 - after `go` d with rope: handled by `quarry_floor.onEnter`.
 - picture brief: cliff edge in the foreground (grey), a black void dropping below, a rusty iron post leaning right, a tin hut silhouette left, wind-blown rain. fx `rain`, `lightning`.
 
@@ -750,7 +764,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - zone moor · dark no · safe no · nerve +1 · ambient `wind` · picture `quarry_floor`
 - desc: "The quarry floor: black water, spoil heaps, a burnt-out car. In the lee of a boulder someone has made a fire, often - a ring of stones, years of ash. A rough path zig-zags back up to the edge."
 - items here: `exercise_book` (`initial`).
-- onEnter: `{ if: '!climbed_down', setFlag: 'climbed_down', say: 'You loop the rope round the winch post and let yourself down hand over hand, the wet rock scraping your knees. Then you are at the bottom, and the rope is yours again.' }`
+- onEnter (first match): `[{ if: '!climbed_down', setFlag: 'climbed_down', say: 'You loop the rope round the winch post and let yourself down hand over hand, the wet rock scraping your knees. Then you are at the bottom, and the rope is yours again.' }, { if: { not: { carried: 'rope' } }, say: 'You find the top of the goat track and pick your way down, sliding on the spoil.' }]`
 - sink: "It splashes into the black water and is gone."
 - scenery:
   - `water` -> "Deep, they say. Nobody knows how deep."
@@ -1013,7 +1027,7 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 **`room_key`** - desc: "A brass Yale on a wooden tag: 3. Harrow's room." · `before: { use: "You'll let yourself in when you go upstairs.", unlock: "You'll let yourself in when you go upstairs." }`
 
 **`harrows_door`** - desc: "Room 3, at the top of the stairs." · `before: { open: HARROWS_DOOR, unlock: HARROWS_DOOR }` with
-`HARROWS_DOOR = [{ if: { carried: 'room_key' }, say: "You've got Maggie's key. Just go UP." }, "Locked. Maggie keeps the keys behind the bar."]`
+`HARROWS_DOOR = [{ if: 'entered_harrows_room', say: "You left it on the latch. Just go UP." }, { if: { carried: 'room_key' }, say: "You've got Maggie's key. Just go UP." }, "Locked. Maggie keeps the keys behind the bar."]`
 
 **`whisky`** - desc: "A half-bottle of Bell's. Maggie's price, Silas's poison." · `criticalMsg`: "That's for Silas. Hang on to it." · no `drinkable` (L18): DRINK WHISKY -> criticalMsg.
 
@@ -1580,17 +1594,19 @@ daemons: [
           say: '"Three," says Pike, and takes a step closer. Behind him Harrow is trying to say something. Do something.' },
         { if: [{ lit: true },  { var: 'attack', eq: 2 }], style: 'alert',
           say: 'He circles, knife low. "One," he says, matching your steps. "Two."' },
-        { if: [{ lit: false }, { var: 'attack', gte: 2 }], sfx: 'scream', end: 'death_pike' },
-        { if: [{ lit: false }, { var: 'attack', eq: 1 }], style: 'alert',
+        { if: [{ lit: false }, { var: 'attack', gte: 2 }, 'dark_warned'], sfx: 'scream', end: 'death_pike' },
+        { if: { lit: false }, setFlag: 'dark_warned', style: 'alert',
           say: 'In the dark the counting is suddenly very close. "One..." Light. You need light, now.' },
       ] } },
 ],
 ```
 Warnings before death (fairness): lit - 2 ("He circles, knife low"), 3, 4 (lunge); dark - 1, plus
-the TURN OFF TORCH warning (`dark_warned`). The room can only be entered lit (exit `if`), so the
-dark branch happens only after the player has switched the torch off in here - having been warned
-once - and is then fatal at once if `attack >= 2` (PLAN "fatal at 2"). The dark "warning at 1"
-text is kept for contract completeness; with this map it is unreachable. The counter persists when the player leaves and
+the TURN OFF TORCH warning (`dark_warned`). The dark branch is fatal only once `dark_warned` is
+set (PLAN "dark: warning at 1, fatal at 2"): switching the torch off in here gives the TURN OFF
+warning first, and any other dark turn in here - e.g. walking back in by the darkness rule's way
+back (§3.3 msg F note) with the torch off - gives the "One..." warning and sets `dark_warned`, so
+the next dark turn is fatal (TT-121). Through the tunnel's `n` exit the room can only be entered
+with a light in hand. The counter persists when the player leaves and
 resumes on re-entry (+1 on the entering turn). Nerve: Beneath caps at 99, never panics (§3.1).
 
 Counter walk-through, reference walkthrough (§12): enter on command 89 -> `attack` 1 (greeting);
@@ -1610,7 +1626,7 @@ before D4 makes it 3).
 hazards: {
   lock:   { room: 'lock', verbs: ['swim', 'enter', 'jump'], objects: ['lock_water'], ending: 'death_drown',
             warn: 'You stand at the edge of the lock and look down into ten feet of black, churning water. If you went in there you would not come out. (If it is the cottage you want, it is NORTH.)' },
-  quarry: { room: 'quarry_edge', exit: 'd', unless: { carried: 'rope' }, ending: 'death_fall',
+  quarry: { room: 'quarry_edge', exit: 'd', unless: { any: [{ carried: 'rope' }, 'climbed_down'] }, ending: 'death_fall',
             warn: 'You look over the edge. Sixty feet of wet rock down to black water, and not a handhold you would trust. Without a rope you would never make it down alive.' },
 },
 ```
@@ -2020,29 +2036,32 @@ restores turn 5 (the warning has already been given, so a second SWIM is still f
 condition, once met, stays met (`mill_chain_cut`, `shed_open`, `morgue_hatch_found`, `hatch_oiled`,
 the cabinet stays unlocked, Pike never leaves the Counting Room once there). Critical items can't be
 destroyed, eaten, drunk, thrown away or given to the wrong NPC (A8.7); DROP leaves them where
-they're dropped, and every room stays reachable. Darkness never traps the player: the way back
-to `prevRoomId` always exists (A8.3 step 4). Panic moves the player to the zone's safe room and
-never happens Beneath.
+they're dropped, and every room stays reachable - including the two rooms behind a gate item
+(Harrow's room stays on the latch once entered; the quarry floor's goat track is known once
+climbed). Darkness never traps the player: the way back to `prevRoomId` always exists and is
+always open in the dark (A8.3 step 4, A17 C39), and anything dropped in the dark can be taken
+again by touch (A8.1 groping, A17 C38). Panic moves the player to the zone's safe room and never
+happens Beneath. (Softlocks found by TT-022 and fixed in TT-120..123 are listed per row.)
 
 | Item / resource | Needed for | Ways it could be lost, and why it can't be |
 |---|---|---|
-| `torch` (C) | dark rooms; both ways into Beneath | Never runs out (fuel 320 >= 300, flicker is cosmetic). Can be dropped (retrievable), not thrown, broken or given away. |
-| `batteries` (C) | lighting the torch | Two ways to get them (SHOW CARD / ASK ABOUT BATTERIES); `got_batteries` stops duplicates. Until loaded they are protected; loading moves them to `null` deliberately (they are in the torch now, and `torch_loaded` is permanent). |
-| `room_key` (C) | Harrow's room (optional points and pointers) | Protected. Given only by SHOW CARD, which can be done at any time. |
+| `torch` (C) | dark rooms; both ways into Beneath | Never runs out (fuel 320 >= 300, flicker is cosmetic). Can be dropped (retrievable), not thrown, broken or given away. Dropped switched off in a dark room, TAKE TORCH finds it by touch (TT-120). Left in the Counting Room, the dark tunnel always lets you feel your way back in (TT-121); left burning in the tunnel, it does not let you into the Counting Room without it (TT-122). Beneath, where there is no way back in without a light, you can't walk away from it either: the dark tunnel and the dark rooms around it only let you retrace your steps, so it stays within reach. |
+| `batteries` (C) | lighting the torch | Two ways to get them (SHOW CARD / ASK ABOUT BATTERIES); `got_batteries` stops duplicates. Until loaded they are protected; loading moves them to `null` deliberately (they are in the torch now, and `torch_loaded` is permanent). Dropped in the dark crypt before loading, TAKE BATTERIES finds them by touch (TT-120). |
+| `room_key` (C) | Harrow's room (optional points and pointers) | Protected. Given only by SHOW CARD, which can be done at any time. Once you have let yourself in the door stays on the latch (`entered_harrows_room` opens the `u` exit), so a key dropped in the room can't lock you out (TT-123). |
 | `coin` | phone call (optional +5) | Not critical, so it can be thrown into the canal or the quarry. Fallback: ASK MAGGIE ABOUT CHANGE / PHONE gives a 10p while `!phoned` and money >= 210. While the coin is still hidden she points to the bench. |
 | `whisky` (C) | Silas's story -> bolt cutters (essential) | Protected: no `drinkable`, refused to every NPC except Silas. If it were somehow `null` with Silas still untold, Maggie sells it again (A8.9). |
 | money (500p) | whisky (200), pints (50), 10p (10) | Until `silas_told`, pints need >= 260 and the 10p >= 210, so 200 is always left for the whisky. The wallet is `personal`. |
 | `bolt_cutters` (C) | mill chain AND Harrow's chains (essential) | Protected; Silas never takes them back. The shed stays open. |
 | `oil_can` (C) | boiler route (alternative) | Protected. The morgue route needs no oil. |
 | `crowbar` (C) | cabinet -> patient file (+10, morgue pointer) | Protected. The morgue drawer can also be found without the file (desc: "does not sit flush"; EXAMINE DRAWER: "greased rails"). |
-| `rope` (C) | quarry floor (optional lead) | Protected so the quarry floor never becomes unreachable. The quarry floor's `u` exit doesn't need the rope, so you can't get stuck down there. |
+| `rope` (C) | quarry floor (optional lead) | Protected so the quarry floor never becomes unreachable. The quarry floor's `u` exit doesn't need the rope, so you can't get stuck down there. After the first climb (`climbed_down`) the hazard is off - you know the goat track - so a rope left on the floor can't strand the floor above the fatal fall (TT-123). |
 | `handcuffs` (C) | arrest (essential for victory) | Protected. Pointers before the finale: the empty cuff pouch in Harrow's room, HQ / map / occurrence book -> the car, the car `initial` text, hint 8, and Harrow in the finale ("Cuffs - in my car!"). |
 | `ledger_page`, `button`, `patient_file` (C) | evidence | Protected; dropping lowers the evidence count, picking up restores it. Four sources for a threshold of three, so one can be skipped. |
 | `ev_register` (fact) | evidence | A fact, so once found it can't be lost. |
 | Maggie / Silas cooperation | items | They never move, never refuse forever, and every gate is a flag that stays set. |
 | Pike's arrival | iron door | Either ACCUSE (>= 3 evidence) -> arrives 5 turns later, or automatic at turn 250. A weak or wrong-suspect accusation never blocks him (wrong -> ending, weak -> retry). |
 | Counting Room | finale | Re-entry is always possible; the counter pauses outside. Cuffs and cutters can be fetched in either order. |
-| Dark Counting Room | - | Can only be entered lit; switching off inside is warned first (`dark_warned`). |
+| Dark Counting Room | - | Through the tunnel door only with a lit torch in hand (msg F). Dark inside only after a warning: switching off inside is warned first (`dark_warned`); feeling your way back in by the darkness rule with the torch off gives the "One..." warning first (§8.4). |
 | Lock / quarry hazards | - | Warned once (1 turn); the warning text says what will happen. Bare ENTER at the lock is the hazard (no `in` exit there; the warning points north to the cottage). |
 | Clock | - | Reference win at turn 91 (boiler route 102). The latest feasible win: Pike arrives at 250 even if never accused, leaving 50 turns for the tunnel and finale. |
 | UNDO after death | - | Restores the line before; hazard warnings stay given (state.warned), matching "warned once". |

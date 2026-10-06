@@ -267,3 +267,50 @@ test('pronouns: IT after a single object, THEM after ALL', () => {
   g.input('take all');
   assert.deepEqual(texts(g.input('drop them')), ['Torch: Dropped.', 'Satchel: Dropped.', 'Helmet: Dropped.']);
 });
+
+/* -------------------------------------------- TT-120: groping in the dark (A8.1, A17 C38) */
+
+test('TAKE in an unlit room finds a loose item on the floor by touch (TT-120)', () => {
+  const g = newGame();
+  at(g, 'cellar', (s) => { s.prevRoomId = 'alley'; s.items.torch.loc = 'player'; });
+  assert.deepEqual(texts(g.input('drop torch')), ['Dropped.']);
+  const ev = g.input('take torch');
+  assert.deepEqual(texts(ev), [obj.takenDark.replace('{the}', 'the torch')]);
+  assert.ok(ev.some((e) => e.type === 'sfx' && e.id === 'pickup'));
+  assert.equal(loc(g, 'torch'), 'player');
+  assert.equal(g.snapshot().turn, 2);
+});
+
+test('groping: critical and ordinary items alike; TAKE ALL too; IT works', () => {
+  const g = newGame();
+  at(g, 'cellar', (s) => { s.prevRoomId = 'alley'; s.items.helmet.loc = 'cellar'; s.items.torch.loc = 'cellar'; });
+  g.input('take all');
+  assert.equal(loc(g, 'helmet'), 'player');
+  assert.equal(loc(g, 'torch'), 'player');
+  assert.equal(loc(g, 'iron_key'), 'player', 'any loose portable item on the floor');
+  g.input('drop helmet');
+  g.input('take it');
+  assert.equal(loc(g, 'helmet'), 'player');
+});
+
+test('groping never reaches hidden items, container contents, fixed things, or other verbs', () => {
+  const g = newGame();
+  at(g, 'cellar', (s) => {
+    s.prevRoomId = 'alley';
+    s.items.satchel.loc = 'cellar'; s.items.satchel.open = true;
+    s.items.coin.loc = 'cellar';
+  });
+  assert.deepEqual(texts(g.input('take coin')), [MESSAGES.tooDark], 'hidden');
+  assert.deepEqual(texts(g.input('take handcuffs')), [MESSAGES.tooDark], 'inside an open container on the floor');
+  assert.deepEqual(texts(g.input('x satchel')), [MESSAGES.tooDark], 'EXAMINE still needs light');
+  assert.deepEqual(texts(g.input('open satchel')), [MESSAGES.tooDark], 'only TAKE gropes');
+  g.input('take satchel');
+  assert.equal(loc(g, 'satchel'), 'player');
+  assert.equal(loc(g, 'handcuffs'), 'satchel', 'the contents come along inside it');
+});
+
+test('in a lit room TAKE is unchanged (Taken.)', () => {
+  const g = newGame();
+  at(g, 'office');
+  assert.deepEqual(texts(g.input('take helmet')), [MESSAGES.taken]);
+});

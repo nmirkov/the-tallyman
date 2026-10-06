@@ -39,7 +39,7 @@ export const hazards = {
     warn: 'You stand at the edge of the lock and look down into ten feet of black, churning water. If you went in there you would not come out. (If it is the cottage you want, it is NORTH.)',
   },
   quarry: {
-    room: 'quarry_edge', exit: 'd', unless: { carried: 'rope' }, ending: 'death_fall',
+    room: 'quarry_edge', exit: 'd', unless: { any: [{ carried: 'rope' }, 'climbed_down'] }, ending: 'death_fall',
     warn: 'You look over the edge. Sixty feet of wet rock down to black water, and not a handhold you would trust. Without a rope you would never make it down alive.',
   },
 };

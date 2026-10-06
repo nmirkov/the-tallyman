@@ -798,7 +798,7 @@ describe('dark-room entry / exit without light (A8.3 darkness rule)', () => {
 });
 
 describe('light sources and darkness never trap the player (STORY §13, PLAN §2.5 "always retrievable")', () => {
-  test('the torch switched off and dropped in a dark room can be taken again', { todo: 'TT-120' }, () => {
+  test('the torch switched off and dropped in a dark room can be taken again', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 36), 'd']);
     assert.equal(snap(g).roomId, 'crypt');
@@ -807,7 +807,7 @@ describe('light sources and darkness never trap the player (STORY §13, PLAN §2
     assert.ok(isCarried(snap(g), 'torch'), 'the only light is lost in the dark: game unwinnable');
   });
 
-  test('the batteries dropped in the dark crypt (torch not yet loaded) can be taken again', { todo: 'TT-120' }, () => {
+  test('the batteries dropped in the dark crypt (torch not yet loaded) can be taken again', () => {
     const g = fresh();
     feed(g, ['w', 'take torch', 'e', 'n', 'n', 'w', 'show card to maggie', 'e', 'n', 'ne', 'n', 'd']);
     assert.equal(snap(g).roomId, 'crypt');
@@ -815,13 +815,13 @@ describe('light sources and darkness never trap the player (STORY §13, PLAN §2
     assert.ok(isCarried(snap(g), 'batteries'), 'the only batteries are lost in the dark: no light, game unwinnable');
   });
 
-  test('the torch switched off and dropped in the dark boiler room can be taken again', { todo: 'TT-120' }, () => {
+  test('the torch switched off and dropped in the dark boiler room can be taken again', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 51), 'cut chain', 'n', 'd', 'turn off torch', 'drop torch', 'take torch']);
     assert.ok(isCarried(snap(g), 'torch'));
   });
 
-  test('leaving the lit torch in the Counting Room does not trap you in the dark tunnel', { todo: 'TT-121' }, () => {
+  test('leaving the lit torch in the Counting Room does not trap you in the dark tunnel', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 90), 'drop torch', 's']);
     if (snap(g).roomId === 'tunnel') {
@@ -832,7 +832,7 @@ describe('light sources and darkness never trap the player (STORY §13, PLAN §2
     assert.ok(isCarried(snap(g), 'torch'));
   });
 
-  test('switched off in the Counting Room, dropped, walked out: the tunnel still lets you back', { todo: 'TT-121' }, () => {
+  test('switched off in the Counting Room, dropped, walked out: the tunnel still lets you back', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 90), 'turn off torch', 'drop torch', 's']);
     if (snap(g).roomId === 'tunnel') {
@@ -844,18 +844,84 @@ describe('light sources and darkness never trap the player (STORY §13, PLAN §2
     }
   });
 
-  test('the switched-off torch dropped in the tunnel: the way back down is never closed for good', { todo: 'TT-120' }, () => {
+  test('the switched-off torch dropped in the tunnel: the way back down is never closed for good', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 88), 'turn off torch', 'drop torch', 'take torch']);
     assert.ok(isCarried(snap(g), 'torch'));
   });
 
-  test('the Counting Room is only ever entered with a light (torch left lit in the tunnel)', { todo: 'TT-122' }, () => {
+  test('the Counting Room is only ever entered with a light (torch left lit in the tunnel)', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 88), 'drop torch']);
     const ev = g.input('n');
     const enteredDark = snap(g).roomId === 'counting_room' && texts(ev).some((t) => /pitch dark/i.test(t));
     assert.ok(!enteredDark, 'STORY §3.3: "the Counting Room is only ever entered with a light"');
+  });
+});
+
+describe('TT-120..122 regressions: groping, the way back, the dark Counting Room', () => {
+  test('content: no portable, non-hidden item starts loose in a dark room (groping only finds what you dropped)', () => {
+    const loose = Object.entries(content.items).filter(([, it]) => content.rooms[it.location]?.dark
+      && !it.hidden && !it.fixed && !it.scenery);
+    assert.deepEqual(loose.map(([id]) => id), []);
+  });
+
+  test('batteries dropped in the dark crypt: SEARCH names them, TAKE finds them, the torch still loads', () => {
+    const g = fresh();
+    feed(g, ['w', 'take torch', 'e', 'n', 'n', 'w', 'show card to maggie', 'e', 'n', 'ne', 'n', 'd', 'drop batteries']);
+    assert.match(joined(g.input('search')), /Your hand finds some batteries\./);
+    assert.match(joined(g.input('take batteries')), /You fumble about in the dark until your hand closes on the batteries\./);
+    g.input('turn on torch');
+    assert.equal(snap(g).items.torch.lit, true);
+  });
+
+  test('Pike counting, lit torch dropped in the Counting Room, walk out: the way back in stays open', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 89), 'drop torch', 's']);
+    assert.equal(snap(g).roomId, 'tunnel');
+    g.input('n');
+    assert.equal(snap(g).roomId, 'counting_room');
+    g.input('take torch');
+    assert.ok(isCarried(snap(g), 'torch'));
+  });
+
+  test('switched off in the tunnel and walked back in to Pike: warned once in the dark, light saves you', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 89), 's', 'turn off torch']);
+    const t = joined(g.input('n'));
+    assert.equal(snap(g).roomId, 'counting_room', 'the way back is retraced by feel (A8.3 step 4)');
+    assertRunning(g, 'no unwarned dark death (PLAN §2.5 dark: warning at 1, fatal at 2)');
+    assert.match(t, /Light\. You need light, now\./);
+    g.input('turn on torch');
+    assertRunning(g);
+    g.input('arrest pike');
+    assert.equal(snap(g).vars.pikeState, 'restrained');
+  });
+
+  test('…and staying dark after that warning is fatal', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 89), 's', 'turn off torch', 'n']);
+    assertEnding(g, g.input('wait'), 'death_pike');
+  });
+
+  test('msg F: a torch burning on the tunnel floor is not a light in your hand', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 88), 'drop torch']);
+    assert.match(joined(g.input('n')), /without your torch in your hand\? Not a chance\./);
+    feed(g, ['take torch', 'n']);
+    assert.equal(snap(g).roomId, 'counting_room');
+  });
+
+  test('torch dropped switched off in the tunnel, walked into the dark morgue: confined to the way back, never lost', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 88), 'turn off torch', 'drop torch', 's']);
+    assert.equal(snap(g).roomId, 'morgue');
+    g.input('u');
+    assert.equal(snap(g).roomId, 'morgue', 'not the way back: you cannot wander off from your light');
+    g.input('d');
+    assert.equal(snap(g).roomId, 'tunnel', 'the hidden, light-guarded hatch is retraced by feel');
+    g.input('take torch');
+    assert.ok(isCarried(snap(g), 'torch'));
   });
 });
 
@@ -910,13 +976,40 @@ describe('Beneath refuses entry without light (STORY §3.3 msgs D, E, F)', () =>
 });
 
 describe('a gate item dropped behind its own gate (PLAN §2.5: no room ever becomes permanently inaccessible)', () => {
-  test('room key dropped in Harrow\'s room: the room can be entered again', { todo: 'TT-123' }, () => {
+  test('room key dropped in Harrow\'s room: the room can be entered again', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 16), 'drop key', 'd', 'u']);
     assert.equal(snap(g).roomId, 'harrows_room', 'locked out of Harrow\'s room for good (key upstairs, SHOW CARD gives no second key)');
   });
 
-  test('rope dropped on the quarry floor: the floor can be reached again without dying', { todo: 'TT-123' }, () => {
+  test('Harrow\'s door stays on the latch: OPEN DOOR says so, and the key is no longer needed', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 16), 'drop key', 'd']);
+    assert.match(joined(g.input('open door')), /You left it on the latch\. Just go UP\./);
+    g.input('u');
+    assert.equal(snap(g).roomId, 'harrows_room');
+    g.input('take key');
+    assert.ok(isCarried(snap(g), 'room_key'));
+  });
+
+  test('before entering, Harrow\'s door is still locked without the key (msg A)', () => {
+    const g = fresh();
+    feed(g, ['n', 'n', 'w']);
+    assert.match(joined(g.input('u')), /Maggie keeps the keys behind the bar\./);
+    assert.equal(snap(g).roomId, 'black_lamb');
+  });
+
+  test('quarry: after the first climb the goat track takes you down without the rope', () => {
+    const g = fresh();
+    feed(g, ['n', 'n', 'n', 'n', 'n', 'e', 'in', 'take rope', 'out', 'd', 'drop rope', 'u']);
+    assert.match(joined(g.input('x path')), /The top of the goat track/);
+    const t = joined(g.input('d'));
+    assert.equal(snap(g).roomId, 'quarry_floor');
+    assert.match(t, /pick your way down/);
+    assert.deepEqual(snap(g).warned, []);
+  });
+
+  test('rope dropped on the quarry floor: the floor can be reached again without dying', () => {
     const g = fresh();
     feed(g, ['n', 'n', 'n', 'n', 'n', 'e', 'in', 'take rope', 'out', 'd', 'drop rope', 'u', 'd']);
     assertRunning(g);

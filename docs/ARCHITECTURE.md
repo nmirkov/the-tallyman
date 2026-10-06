@@ -772,6 +772,7 @@ hook exception into an ordinary result.
 ### A8.1 Scope
 - **Visible**, room lit: items with `loc === roomId` or `roomId ∈ alsoIn`; NPCs with `loc === roomId`; the room's scenery; carried items; recursively the contents of every visible item that is a supporter, an open container or a transparent container. Hidden items (`hidden: true`) are never visible.
 - **Visible**, room unlit: carried items and, recursively, the contents of carried open containers (by touch).
+- **Groping** (TT-120, C38), room unlit: `gropeable` = portable (not `fixed` / `scenery`), non-hidden items with `loc === roomId` (not via `alsoIn`, not inside containers). They are not visible, but TAKE's `dobj` (and TAKE ALL from the room) also resolves among them and counts them as reachable; the take succeeds with `takenDark` ("You fumble about in the dark until your hand closes on {the}.") instead of `taken`. SEARCH in the dark lists them (A8.6). Every other verb still answers `tooDark`. Content rule: no portable non-hidden item starts loose in a dark room (tested in the solvability suite), so groping only finds what the player put there.
 - **Reachable** = visible and not inside a closed container; handlers refuse unreachable objects with "You can't reach it." (1 turn).
   One registry wrapper applies this to every physical verb's `dobj` (take, drop, put, open, close, unlock, lock, push, pull, move, turn_on, turn_off, wear, remove, eat, drink, throw, break, tear, cut, oil, use, touch, attack, give, arrest, free) and tool `iobj` (put, unlock, lock, break, tear, cut, oil, use, attack, arrest) at the handler step; an implicit key (`keyId`) must be reachable too. Observation verbs and SHOW need only visibility (TT-101).
 - Items held by NPCs (`loc = npcId`) and items with `loc = null` are never in scope (except BUY, A6.3 M3).
@@ -786,7 +787,7 @@ light on requires `light.needs` (if any) to hold, else `needsMsg`.
 1. Direction from the command (`go`, bare direction, `enter`/`exit`/`climb` defaults: bare `enter` = `in`, `exit` = `out`, `climb up/down` = `u`/`d`; `enter X` / `climb X` run reactions first and then try `in` / `u`; `back` = the first direction in `DIRECTIONS` whose exit leads to `prevRoomId`).
 2. Hazard check (A7.5 step 1) for `exit`-hazards.
 3. No exit that way → `cantGo` (unlit room: `darkMove`). 1 turn.
-4. **Darkness rule:** in an unlit room the player may only take an exit leading to `prevRoomId`; other exits → `darkMove`. If no exit leads to `prevRoomId` (or it is null) every exit is allowed (no softlock).
+4. **Darkness rule:** in an unlit room the player may only take an exit leading to `prevRoomId` (the *way back*); other exits → `darkMove`. The way back is retraced by feel: its `if` and `hidden` are not checked (steps 3 and 5 skip it), only its `door` and stub status are (TT-121, C39). If no exit leads to `prevRoomId` (or it is null), or every way back is behind a closed door, every exit is allowed, each subject to its own `if` (no softlock).
 5. Exit `if` false → `msg` (default `cantGo`). Exit `door` not open → "The {door} is closed.".
 6. Target is a stub → `MESSAGES.stub`; the player stays.
 7. **Room entry** (also used by `movePlayer` and panic): `prevRoomId = roomId`; `roomId = to`; emit `room`, `picture`, the description (A8.4); run `onEnter`; add to `visited`.
@@ -808,7 +809,7 @@ light on requires `light.needs` (if any) to hold, else `needsMsg`.
 
 ### A8.5 Objects, containers, doors
 - **TAKE**: already carried (personal items included) → "You already have that."; NPC → "{The} wouldn't care for that."; `fixed`/`scenery` → the item's text or `MESSAGES.fixed`; unreachable → "You can't reach it."; success → `loc = 'player'`, `moved = true`, evidence discovery (A8.8), `taken`, then `sfx pickup`.
-- **DROP**: not carried → "You aren't holding that."; success → `loc = roomId`, `dropped`. Critical items may be dropped (always retrievable).
+- **DROP**: not carried → "You aren't holding that."; success → `loc = roomId`, `dropped`. Critical items may be dropped (always retrievable — in an unlit room by groping, A8.1).
 - **PUT X IN/ON Y**: Y must be a container (`on` needs `supporter`), open, with room (`capacity` counts direct contents); putting something into itself or its own contents → "You can't put something inside itself.".
 - **OPEN / CLOSE / LOCK / UNLOCK**: `openable` items; locked items cannot be opened; `unlock X` without `with` uses `keyId` automatically if carried, printing "(with the {key})". Opening or closing an item used as an exit `door` emits `sfx door`.
 - Default refusals for other verbs are owned by their action module and registered as message ids (overridable via `content.messages`).
@@ -816,6 +817,7 @@ light on requires `light.needs` (if any) to hold, else `needsMsg`.
 ### A8.6 Hidden items and SEARCH
 - `SEARCH` / `SEARCH ROOM` / `SEARCH AROUND` reveals every hidden item whose location chain ends in the current room without passing through a closed container. `SEARCH X` / `LOOK UNDER X` reveals hidden items located in or on X.
 - Reveal: `hidden = false`, then `found` (default "You find {a item}."). Revealed items are not taken automatically. Nothing found → "You find nothing of interest." EXAMINE never reveals. 1 turn.
+- Unlit room: SEARCH reveals nothing. With `gropeable` items (A8.1) → `searchDarkFeel` "You grope around in the dark. Your hand finds {list}." (indefinite names, content order); otherwise `searchDark`. SEARCH X in the dark is refused unless X is carried.
 
 ### A8.7 Protection of personal and critical items (PLAN §2.5 resource policy)
 Applied at A7.5 step 2 — before any content reaction, so content cannot accidentally bypass it.
@@ -837,6 +839,7 @@ only exempts the given item itself) (TT-101).
 
 Engine default handlers never destroy an item for BREAK / TEAR / CUT; only content reactions can, and lint warns on reactions that `move` a critical item to `null`. The warrant card and wallet are `personal`; money is a balance, never an item that can be
 lost. No exit is ever removed, so no room becomes permanently inaccessible before an ending.
+"Always retrievable" covers darkness too: a critical item dropped in an unlit room is found again by groping (A8.1), and the darkness rule's way back (A8.3 step 4) keeps the player beside a light source dropped in the dark. A *gate item* (an item an exit `if` requires carried) must not be able to lock its own room behind it: content gives such exits a "once through, stays open" clause (STORY §13: Harrow's door on the latch, the quarry goat track) (TT-123).
 
 ### A8.8 Evidence and notes (PLAN §2.5 evidence ids)
 - **Discovery.** Item evidence is discovered the first time its item becomes carried by any route (TAKE, `give`, `move` to the player, BUY). Fact evidence is discovered by the `evidence` effect / `api.addEvidence`. Discovery appends the id to `state.evidence`, then adds its `note` (emits `noted`), then its `award` (emits `scoreUp`).
@@ -1363,3 +1366,5 @@ Parser / resolution errors, chain notices, `scoreUp`, `noted`, `undone`, `cantUn
 | C35 | `game.snapshot()` added to the API | Tests and tools need read access without serialising. |
 | C36 | Panic, ending and prompts stop the chain; meta commands and in-world failures do not | PLAN's stop list, plus the natural reading that "The door is locked." is not an error. |
 | C37 | Self-reference: ME / MYSELF / SELF / YOURSELF bind to the reserved id `player`; commands (and saved `ctx.lastCommand`) may target `player`; EXAMINE ME is content-overridable, other verbs answer harmlessly | Classic IF convention; added in TT-009. |
+| C38 | Groping: in an unlit room TAKE / TAKE ALL find portable, non-hidden items lying loose on the floor by name, and SEARCH names them; nothing else is in scope (A8.1, A8.6) | PLAN §2.5 "always retrievable": the torch or batteries dropped in the dark were otherwise lost for good (TT-120). Classic "you fumble in the dark" convention; content keeps dark rooms free of loose starting items, so it only finds what the player dropped. |
+| C39 | The darkness rule's way back ignores the exit's `if` / `hidden` (retraced by feel); a closed door on it counts as no way back (A8.3 step 4) | A conditional way back (the tunnel's iron door) stranded a player who left the light behind (TT-121). Content that must stay guarded in the dark guards the room instead (STORY §8.4: the dark attack branch warns before it kills). |

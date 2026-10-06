@@ -31,11 +31,16 @@ export const rooms = {
       { text: `${TUNNEL_BASE} North, an iron door, shut. Behind it, very faint, a man is praying.` },
     ],
     exits: {
-      // Msg F (STORY §3.3): the Counting Room is only ever entered with a light.
+      // Msg F (STORY §3.3): the Counting Room is only ever entered with a light the player
+      // carries (TT-122: a torch left lit out here lights the tunnel, not the room beyond).
+      // Coming back out of the dark, the way back in is the darkness rule's (A8.3 step 4).
       n: {
-        to: 'counting_room', if: [PIKE_BELOW, { lit: true }],
+        to: 'counting_room', if: [PIKE_BELOW, { carried: 'torch' }, { lit: true }],
         msg: [
-          { if: PIKE_BELOW, text: 'Into a room with Pike in it, in the dark? Not a chance. Turn your torch on.' },
+          { if: [PIKE_BELOW, { var: 'pikeState', eq: 'counting' }, { carried: 'torch' }], text: 'Into a room with Pike in it, in the dark? Not a chance. Turn your torch on.' },
+          { if: [PIKE_BELOW, { var: 'pikeState', eq: 'counting' }], text: 'Into a room with Pike in it, without your torch in your hand? Not a chance.' },
+          { if: [PIKE_BELOW, { carried: 'torch' }], text: 'Not in the dark. Not with Pike in there, cuffs or no cuffs. Turn your torch on.' },
+          { if: PIKE_BELOW, text: 'Not in the dark. Not with Pike in there, cuffs or no cuffs. Bring your torch.' },
           { if: { turnGte: 180 }, text: 'The iron door is barred from the other side. Beyond it, Harrow is praying - slower now, losing his place.' },
           { text: 'The iron door is barred from the other side. Beyond it, Harrow is praying.' },
         ],

@@ -11,11 +11,12 @@ import { listJoin, capitalise } from '../text.js';
 import * as world from '../world.js';
 import {
   defineActions, refuse, succeed, tell, sfx, names, isItem, isNpc, itemDef, itemState, held,
-  unreachable, portable, isDoor, OK, FAIL,
+  unreachable, groped, portable, isDoor, OK, FAIL,
 } from './common.js';
 
 export const messages = Object.freeze({
   alreadyHave: 'You already have that.',
+  takenDark: 'You fumble about in the dark until your hand closes on {the}.',
   takeNpc: '{The} wouldn\'t care for that.',
   cantReach: 'You can\'t reach it.',
   notHolding: 'You aren\'t holding that.',
@@ -80,9 +81,10 @@ function take(cmd, api) {
     }
     return refuse(api, 'fixed');
   }
+  const felt = groped(api, id);
   world.moveItem(api.state, id, PLAYER);
   if (itemState(api, id).moved === false) itemState(api, id).moved = true;
-  tell(api, 'taken');
+  tell(api, felt ? 'takenDark' : 'taken', id);
   sfx(api, 'pickup');
   discoverCarried(run);
   return OK;

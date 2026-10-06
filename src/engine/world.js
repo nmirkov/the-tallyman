@@ -287,6 +287,24 @@ export function isVisible(state, content, id) {
 }
 
 /**
+ * Items the player can find by touch in an unlit room (A8.1 "groping", A17 C38): portable
+ * (neither `fixed` nor `scenery`), not hidden, lying directly on the floor of the player's
+ * room (`loc === roomId`; `alsoIn` doors and container contents excluded). Only TAKE and
+ * SEARCH use them. Empty when the room is lit (they are simply visible then).
+ * @param {State} state
+ * @param {ContentBundle} content
+ * @returns {string[]}  Content order.
+ */
+export function gropeable(state, content) {
+  if (isLit(state, content)) return [];
+  return Object.keys(state.items).filter((id) => {
+    const st = state.items[id];
+    const def = content.items[id];
+    return st.loc === state.roomId && st.hidden !== true && !!def && !def.fixed && !def.scenery;
+  });
+}
+
+/**
  * Visible and not inside a closed container (A8.1 "reachable").
  * @param {State} state
  * @param {ContentBundle} content

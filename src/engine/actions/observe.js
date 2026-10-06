@@ -3,8 +3,9 @@
 
 import { PLAYER } from '../types.js';
 import {
-  runOf, describeRoom, renderText, emitText, sayContents, revealEach, runReaction, kindOf,
+  runOf, describeRoom, renderText, emitText, sayContents, revealEach, runReaction, kindOf, nameOf,
 } from '../api.js';
+import { listJoin } from '../text.js';
 import * as world from '../world.js';
 import {
   defineActions, refuse, succeed, tell, isItem, isNpc, OK,
@@ -15,6 +16,7 @@ export const messages = Object.freeze({
   examineClosed: 'It is closed.',
   nothingFound: 'You find nothing of interest.',
   searchDark: 'You grope around in the dark but find nothing.',
+  searchDarkFeel: 'You grope around in the dark. Your hand finds {list}.',
   searchClosed: '{The} is closed.',
   searchNpc: '{The} would not take kindly to being searched.',
   readDark: 'It\'s too dark to read.',
@@ -72,7 +74,12 @@ function hiddenInRoom(api, roomId) {
 function search(cmd, api) {
   const id = cmd.dobj;
   if (id === undefined) {
-    if (!lit(api)) return refuse(api, 'searchDark');
+    if (!lit(api)) {
+      // A8.6 / C38: the floor can be felt for loose items, but nothing hidden is revealed.
+      const felt = world.gropeable(api.state, api.content);
+      if (!felt.length) return refuse(api, 'searchDark');
+      return succeed(api, 'searchDarkFeel', undefined, { list: listJoin(felt.map((k) => nameOf(runOf(api), k, 'indefinite'))) });
+    }
     if (!revealEach(runOf(api), hiddenInRoom(api, api.state.roomId))) tell(api, 'nothingFound');
     return OK;
   }

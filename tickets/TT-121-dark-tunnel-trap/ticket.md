@@ -2,7 +2,7 @@
 id: TT-121
 title: Leaving the torch in the Counting Room traps the player in the dark tunnel until midnight
 milestone: BUG
-status: todo
+status: done
 agent: writer
 model: opus
 depends: [TT-022]

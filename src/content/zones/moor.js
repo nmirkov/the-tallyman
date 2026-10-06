@@ -46,7 +46,8 @@ export const rooms = {
     ],
   },
 
-  // The way down is the `quarry` hazard (exit d, unless the rope is carried; ../case.js).
+  // The way down is the `quarry` hazard (exit d, unless the rope is carried or you have
+  // already climbed down and found the goat track; ../case.js, TT-123).
   quarry_edge: {
     name: 'Quarry Edge', zone: 'moor', picture: 'quarry_edge', nerve: 2,
     desc: 'The lip of Blackmere Quarry. The face drops sixty feet to black water and spoil heaps. An old winch post leans out over the drop. A tin hut squats behind you. The track runs west to the stone.',
@@ -56,6 +57,13 @@ export const rooms = {
       { names: ['face', 'drop', 'quarry'], desc: "Sixty feet of wet gritstone. Without a rope you'd never make it down alive." },
       { names: ['water', 'spoil', 'heaps'], desc: "Black water at the bottom, grey spoil around it. A ring of stones by a boulder - somebody's fire." },
       { names: ['winch post', 'post', 'winch'], desc: 'An iron post sunk in concrete. You could tie a rope to that.' },
+      {
+        names: ['goat track', 'path'],
+        desc: [
+          { if: 'climbed_down', text: 'The top of the goat track, hidden in the bracken at the lip. From up here you would never have found it.' },
+          { text: 'No way down that you can see. Not without a rope.' },
+        ],
+      },
       { names: ['hut', 'tin hut'], desc: 'Corrugated tin, door hanging off. IN to go inside.' },
     ],
     before: {
@@ -86,10 +94,14 @@ export const rooms = {
       { names: ['boulder', 'fire', 'ring', 'stones', 'ash'], desc: "Years of small fires in the same place. Somebody's private place. Somebody who liked to be alone with something." },
       { names: ['path'], desc: 'A goat track up the spoil. Steep, but you can manage it going up.' },
     ],
-    onEnter: {
-      if: '!climbed_down', setFlag: 'climbed_down',
-      say: 'You loop the rope round the winch post and let yourself down hand over hand, the wet rock scraping your knees. Then you are at the bottom, and the rope is yours again.',
-    },
+    onEnter: [
+      {
+        if: '!climbed_down', setFlag: 'climbed_down',
+        say: 'You loop the rope round the winch post and let yourself down hand over hand, the wet rock scraping your knees. Then you are at the bottom, and the rope is yours again.',
+      },
+      // TT-123: after the first climb you know the goat track, rope or no rope.
+      { if: { not: { carried: 'rope' } }, say: 'You find the top of the goat track and pick your way down, sliding on the spoil.' },
+    ],
   },
 };
 

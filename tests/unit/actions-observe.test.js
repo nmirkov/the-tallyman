@@ -135,7 +135,7 @@ test('SEARCH does not reach into closed containers; LOOK IN an open one lists it
 
 test('SEARCH in the dark finds nothing; SEARCH an NPC is refused', () => {
   const g = newGame();
-  setup(g, (s) => { s.roomId = 'cellar'; s.prevRoomId = 'alley'; s.visited.push('cellar'); });
+  setup(g, (s) => { s.roomId = 'cellar'; s.prevRoomId = 'alley'; s.visited.push('cellar'); s.items.iron_key.loc = 'alley'; });
   assert.deepEqual(texts(g.input('search')), [obs.searchDark]);
   const g2 = newGame();
   g2.input('n');
@@ -173,4 +173,15 @@ test('LISTEN / SMELL have generic responses; rooms can override with before slot
   const content = cloneContent(mini);
   content.rooms.square = { ...content.rooms.square, before: { listen: 'Rain, and the slow tick of the clock.' } };
   assert.deepEqual(texts(newGame(content).input('listen')), ['Rain, and the slow tick of the clock.']);
+});
+
+test('SEARCH in the dark feels loose items on the floor (C38), never hidden ones or container contents', () => {
+  const g = newGame();
+  setup(g, (s) => {
+    s.roomId = 'cellar'; s.prevRoomId = 'alley'; s.visited.push('cellar');
+    s.items.torch.loc = 'cellar';
+    s.items.satchel.loc = 'cellar'; s.items.satchel.open = true;
+  });
+  assert.deepEqual(texts(g.input('search')), ['You grope around in the dark. Your hand finds a torch, a satchel and an iron key.']);
+  assert.equal(g.snapshot().turn, 1);
 });

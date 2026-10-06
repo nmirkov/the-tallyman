@@ -10,6 +10,7 @@ import { CALL_HQ, LOAD_TORCH } from '../shared.js';
  * ------------------------------------------------------------------------ */
 
 const HARROWS_DOOR = [
+  { if: 'entered_harrows_room', say: "You left it on the latch. Just go UP." },
   { if: { carried: 'room_key' }, say: "You've got Maggie's key. Just go UP." },
   'Locked. Maggie keeps the keys behind the bar.',
 ];
@@ -103,7 +104,8 @@ export const rooms = {
     desc: 'The Black Lamb: low beams, horse brasses, a fire that has seen better winters. Three regulars stare into their mild and do not look up. Behind the bar a stair climbs to the guest rooms. Market Square is east.',
     exits: {
       e: 'market_square',
-      u: { to: 'harrows_room', if: { carried: 'room_key' }, msg: "Harrow's door at the top of the stairs is locked. Maggie keeps the keys behind the bar." },
+      // TT-123: once you have let yourself in, the door stays on the latch (STORY §4.1).
+      u: { to: 'harrows_room', if: { any: [{ carried: 'room_key' }, 'entered_harrows_room'] }, msg: "Harrow's door at the top of the stairs is locked. Maggie keeps the keys behind the bar." },
     },
     scenery: [
       { names: ['beams', 'beam'], desc: 'Black oak, low enough to teach tall men humility.' },
@@ -128,7 +130,7 @@ export const rooms = {
       { names: ['chair'], desc: 'A hard chair. His jacket on it.' },
       { names: ['ashtray', 'ends', 'embassy'], desc: 'Six. Frank smokes when he is close to something.' },
     ],
-    onEnter: { if: '!entered_harrows_room', setFlag: 'entered_harrows_room', say: "You let yourself in with Maggie's key.", award: 'harrows_room' },
+    onEnter: { if: '!entered_harrows_room', setFlag: 'entered_harrows_room', say: "You let yourself in with Maggie's key. You leave the door on the latch.", award: 'harrows_room' },
   },
 
   police_house: {

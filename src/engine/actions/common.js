@@ -63,6 +63,12 @@ export function unreachable(api, id) {
   return isItem(api, id) && !world.isReachable(api.state, api.content, id);
 }
 
+/** Not visible, but found by touch on the floor of an unlit room (A8.1 groping, C38). */
+export function groped(api, id) {
+  return isItem(api, id) && !world.isVisible(api.state, api.content, id)
+    && world.gropeable(api.state, api.content).includes(id);
+}
+
 /**
  * Verbs that physically handle their direct object, and verbs whose indirect object is a
  * tool or target the player must touch (A8.1 "reachable"). Observation (EXAMINE, READ, …),
@@ -91,7 +97,8 @@ export function reachGuard(def) {
   return Object.freeze({
     ...def,
     run(cmd, api) {
-      if ((dobj && unreachable(api, cmd.dobj)) || (iobj && unreachable(api, cmd.iobj))) return refuse(api, 'cantReach');
+      const felt = def.verb === 'take' && groped(api, cmd.dobj);
+      if ((dobj && !felt && unreachable(api, cmd.dobj)) || (iobj && unreachable(api, cmd.iobj))) return refuse(api, 'cantReach');
       return inner(cmd, api);
     },
   });

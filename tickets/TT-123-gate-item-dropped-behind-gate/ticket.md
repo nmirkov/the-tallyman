@@ -2,7 +2,7 @@
 id: TT-123
 title: Room key / rope dropped behind their own gate lock Harrow's room / the quarry floor for good
 milestone: BUG
-status: todo
+status: done
 agent: writer
 model: opus
 depends: [TT-022]

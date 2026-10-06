@@ -50,7 +50,7 @@
 import { MESSAGES, CHAIN_BARRIERS, PLAYER } from './types.js';
 import { ARTICLES, ORDINALS, SELF_WORDS, defaultVocab } from './vocab.js';
 import { tokenise, parseCommand } from './parser.js';
-import { scope, isVisible, isCarried, isLit, sceneryOf } from './world.js';
+import { scope, isVisible, isCarried, isLit, sceneryOf, gropeable } from './world.js';
 
 /**
  * @typedef {import('./types.js').State} State
@@ -193,6 +193,8 @@ function slotScope(rc, slot, out) {
     const items = Object.keys(state.items).filter((id) => visible.has(id) || sold.has(id));
     return [...items, ...sc.npcs, ...sc.scenery];
   }
+  // A8.1 groping (C38): in an unlit room TAKE also finds loose items on the floor by touch.
+  if (slot === 'dobj' && cmd.verb === 'take' && !rc.lit) return [...sc.ids, ...gropeable(state, rc.content)];
   return sc.ids;
 }
 
@@ -315,6 +317,7 @@ function expandAll(rc, out) {
       && state.items[id].worn !== true && id !== out.iobj);
   }
   const from = cmd.prep === 'from' && typeof out.iobj === 'string' ? out.iobj : state.roomId;
+  if (verb === 'take' && from === state.roomId && !rc.lit) for (const id of gropeable(state, content)) visible.add(id);
   return ids.filter((id) => {
     const def = content.items[id];
     return state.items[id].loc === from && visible.has(id) && state.items[id].hidden !== true

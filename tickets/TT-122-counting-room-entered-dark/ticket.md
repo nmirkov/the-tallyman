@@ -2,7 +2,7 @@
 id: TT-122
 title: The Counting Room can be entered dark by leaving the lit torch in the tunnel
 milestone: BUG
-status: todo
+status: done
 agent: writer
 model: opus
 depends: [TT-022]

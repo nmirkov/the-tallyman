@@ -50,12 +50,15 @@ export function go(api, dir) {
   const exits = world.exitsOf(state, content, state.roomId, run.hook);
   const exit = exits.find((e) => e.dir === dir);
   const blockedMsg = lit ? 'cantGo' : 'darkMove';
-  if (!exit || (exit.hidden && !exit.condOk)) return refuse(api, blockedMsg);
-  // Darkness rule: only the way back, unless no exit leads back (no softlock).
-  if (!lit && state.prevRoomId && exit.to !== state.prevRoomId && exits.some((e) => e.to === state.prevRoomId)) {
-    return refuse(api, 'darkMove');
-  }
-  if (!exit.condOk) {
+  // Darkness rule (A8.3 step 4, C39): in an unlit room you retrace your own steps by feel.
+  // The way back to prevRoomId ignores its `if` and `hidden` (you just came through it);
+  // only a closed door can stop it, and then — as with no way back at all — every exit
+  // is allowed, so darkness can never trap the player.
+  const backs = !lit && state.prevRoomId ? exits.filter((e) => e.to === state.prevRoomId && !e.stub) : [];
+  const retracing = !!exit && backs.includes(exit);
+  if (!exit || (exit.hidden && !exit.condOk && !retracing)) return refuse(api, blockedMsg);
+  if (!retracing && backs.some((e) => e.doorOpen)) return refuse(api, 'darkMove');
+  if (!exit.condOk && !retracing) {
     if (exit.msg !== null) say(run, exit.msg, undefined, state.roomId);
     else refuse(api, 'cantGo');
     return FAIL;
