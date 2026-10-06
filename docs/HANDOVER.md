@@ -5,20 +5,14 @@
 > the tickets in `tickets/`. Nenad asked for a fully autonomous build — do not ask
 > him questions; decide and log in DECISIONS.md.
 
-## Snapshot — 2026-10-06, M1 review + M3 content/art in parallel
-- HEAD: see `git log --oneline | head -3` (last: "chore: register art zone files…"). Tags: `plan-approved`, `m0`.
-- Done: TT-001…010 (engine complete), TT-013 audio, TT-015 story, TT-016 town/canal content, TT-019 art style gate (approved). ~1080 tests green.
-- **In flight (5 background agents):**
-  - TT-101 R1 review fixes (engine-dev/opus) — 9 blocking Codex findings, `reviews/code-review-R1-1.md`.
-  - TT-017 content moor/mill/asylum (writer/opus).
-  - TT-020a art town+canal → writes `implementation-a.md`; TT-020b art moor/mill/asylum/beneath → `implementation-b.md` (shared ticket TT-020; orchestrator sets status when both done).
-  - TT-021 title + ending screens (artist/opus).
-- **Next steps:**
-  1. When TT-101 lands: verify, commit, launch Codex R1 round 2 (prompt: reviews/code-review-R1-1-prompt.md + "ROUND 2: verify each round-1 blocking item"). On APPROVED → tag `m1`.
-  2. TT-017 → TT-018 (finale content). Then TT-022 (QA suites; ticket stub needs full spec, incl. Codex R3 note: warrant-card & money loss tests).
-  3. M2 UI after R1 approval: TT-011 terminal, TT-012 integration (allow-list must include src/ui/storage.js), TT-014 boot. Specs still stubs — write full specs from PLAN §3.6/3.7/3.8 + ARCHITECTURE A9/A10.
-  4. Known follow-up: `src/content/index.js` loads art with top-level await (TT-016 note) — esbuild iife build can't bundle that once main.js imports content; switch to static import in TT-012.
-- Open risks: art quality varies by agent — check screenshots before committing; R1 may need a round 3.
+## Snapshot — 2026-10-06, M2 integration + softlock fixes
+- Tags: `plan-approved`, `m0`, `m1`. ~1700 tests green (9 todo = known softlocks).
+- **Codex is out of credits** (D-009): reviews use an independent Claude reviewer (model fable, fresh context, writes only reviews/<name>.md). Retry Codex at each milestone: `codex exec ... -m gpt-6-astra` (check log tail for "out of credits").
+- Done: TT-001…022 except TT-012/014/023/024/025; TT-101/102/103 (R1 fixes). Art complete (42 + dark + title + 6 endings).
+- **In flight:** TT-012 browser integration (ui-dev/opus); TT-120…123 softlock fixes (engine-dev/opus; one implementation.md in TT-120 folder).
+- **Next:** commit both (check each's files; TT-012 owns src/ui/** + src/content/index.js) → TT-014 boot (spec ready) → R2 review (M2: src/ui/**, audio) → R3 review (M3 content+QA) → TT-023 smoke (spec ready) → TT-024 blind playtest (spec ready; clean-context testers!) → TT-025 docs → R4 → tag v1.0.
+- Art polish candidates (weak): crypt, vestry, police_house, cells, number_13, entrance_hall, boiler_room, moor_road; ending_death cone; victory cars.
+- Lesson: never wait on a process with `pgrep -f <pattern>` inside a loop whose own command line contains the pattern — wait on the PID.
 
 ## How the orchestrator works
 1. Dispatch: `Agent(subagent_type: general-purpose, model: <ticket model>)`, prompt =
