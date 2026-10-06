@@ -2,7 +2,7 @@
 id: TT-022
 title: Walkthrough, solvability, save-determinism and fuzz suites
 milestone: M3
-status: todo
+status: done
 agent: qa
 model: opus
 depends: [TT-018]
@@ -23,5 +23,5 @@ Prove the finished content is winnable, fair and robust (PLAN §4 table rows Wal
 `tests/walkthrough/*`, `tests/fuzz/*`, `docs/QA-REPORT.md`, `tickets/TT-1*` (new bug tickets only)
 
 ## Acceptance criteria
-- [ ] All suites implemented; failing tests that reveal real bugs are kept but marked `todo` with the bug ticket id (so check stays green) — list them in QA-REPORT.md.
-- [ ] `npm run check` green.
+- [x] All suites implemented; failing tests that reveal real bugs are kept but marked `todo` with the bug ticket id (so check stays green) — list them in QA-REPORT.md.
+- [x] `npm run check` green.
