@@ -3,6 +3,8 @@
 // Item-local named reactions (HARROWS_DOOR, SHED, READ_REGISTER, MOVE_STONE, ...) live
 // with their items in the zone files.
 
+import { ready } from './stubs.js';
+
 /** CALL HQ from the phone box: needs the 10p; once only (+5 `phone_call`). */
 export const CALL_HQ = [
   { if: 'phoned', say: '"Look, Sarge, I\'ve told you everything we\'ve got." The line goes dead.' },
@@ -71,4 +73,38 @@ export const ARREST_PIKE = [
   { if: { var: 'pikeState', eq: 'counting' }, say: "With what? Harrow croaks: 'Cuffs - in my car!'" },
   { if: { evidence: 3 }, say: '"On what charge, Sergeant?" he asks mildly. If you\'re sure, ACCUSE him.' },
   'Not yet. You need more than a hunch.',
+];
+
+/* ------------------------------------------------------------------------ *
+ *  Item reactions shared across zones (STORY §5.2). The crowbar (Moor)       *
+ *  tests for the cabinet (Asylum), drawer 4 (Asylum) and the iron trap       *
+ *  (Mill), so these three live here rather than with their items.           *
+ * ------------------------------------------------------------------------ */
+
+/** OPEN / PRY / BREAK / UNLOCK the records cabinet (needs the crowbar). */
+export const PRY_CABINET = [
+  { if: { open: 'cabinet' }, say: "It's open." },
+  {
+    if: { carried: 'crowbar' }, setItem: { cabinet: { locked: false, open: true } }, sfx: 'creak',
+    say: '(with the crowbar) You jam the claw into the seam and lean. The rust gives with a shriek and the drawer lurches out.',
+  },
+  "Rusted solid. You'd need something to lever it with.",
+];
+
+/** PULL / PUSH / MOVE drawer 4 in the morgue: reveals the hatch (exit d). */
+export const MOVE_DRAWER = [
+  { if: 'morgue_hatch_found', say: 'It has run back as far as it goes. The hatch is open beneath it.' },
+  {
+    setFlag: 'morgue_hatch_found', sfx: 'creak',
+    say: "You put your weight against drawer 4. It doesn't open - it slides, the whole drawer running back into the wall on greased rails. Where it stood, iron rungs drop into a square hatch. Cold air comes up, smelling of brick and canal.",
+  },
+];
+
+/**
+ * Pike's iron trap in the counting-house floor: never opens. The "bolted from beneath"
+ * line needs Pike in the Counting Room, so it switches on with TT-018's rooms (stubs.js).
+ */
+export const TRAP = [
+  ...(ready('counting_room') ? [{ if: { at: ['pike', 'counting_room'] }, say: 'Bolted from beneath. It does not give a fraction.' }] : []),
+  "A disc padlock: no shackle for cutters to bite on, no gap for a crowbar. Pike's lock, Pike's key. There'll be another way down - there always is, in a mill.",
 ];

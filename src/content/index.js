@@ -26,6 +26,9 @@ import { hints } from './hints.js';
 import { stubs, itemStubs } from './stubs.js';
 import * as town from './zones/town.js';
 import * as canal from './zones/canal.js';
+import * as moor from './zones/moor.js';
+import * as mill from './zones/mill.js';
+import * as asylum from './zones/asylum.js';
 import { maggie } from './npcs/maggie.js';
 import { pike } from './npcs/pike.js';
 import { ashdown } from './npcs/ashdown.js';
@@ -44,7 +47,7 @@ export const ITEM_ORDER = Object.freeze([
   'boiler_hatch', 'cabinet', 'patient_file', 'drawer_four', 'drawers', 'chains',
 ]);
 
-const ZONE_MODULES = [town, canal];
+const ZONE_MODULES = [town, canal, moor, mill, asylum];
 
 /** Merges zone items (and item stubs) into one table in ITEM_ORDER; throws on duplicates. */
 function orderedItems() {
@@ -89,7 +92,7 @@ export const content = {
   meta,
   rules: withArt(rules, 'darkPicture'),
   zones,
-  rooms: { ...town.rooms, ...canal.rooms },
+  rooms: Object.assign({}, ...ZONE_MODULES.map((z) => z.rooms)),
   items: orderedItems(),
   npcs: { maggie, pike, ashdown, silas, harrow },
   topics,

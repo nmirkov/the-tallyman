@@ -54,11 +54,10 @@ describe('bundle', () => {
     for (const rule of rules) assert.ok(['L12', 'L14'].includes(rule), `unexpected strict error ${rule}`);
   });
 
-  test('Town has 18 rooms, Canal 5; the other 19 STORY rooms are stubs (42 in all)', () => {
+  test('Town has 18 rooms, Canal 5; rooms + stubs make STORY\'s 42', () => {
     const byZone = (z) => Object.values(content.rooms).filter((r) => r.zone === z).length;
     assert.equal(byZone('town'), 18);
     assert.equal(byZone('canal'), 5);
-    assert.equal(Object.keys(stubs).length, 19);
     assert.equal(Object.keys(content.rooms).length + Object.keys(stubs).length, 42);
   });
 
@@ -488,11 +487,11 @@ describe('gates and refusals', () => {
     assert.equal(snap(g).items.coin.loc, null);
   });
 
-  test('moving into a stub room keeps you where you are', () => {
+  test('the towpath leads west to the mill gates (a stub until TT-017)', () => {
     const g = game();
     at(g, 'towpath');
     say(g, 'w');
-    assert.equal(snap(g).roomId, 'towpath');
+    assert.equal(snap(g).roomId, 'mill_gates');
   });
 });
 
