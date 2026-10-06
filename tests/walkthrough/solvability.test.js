@@ -904,6 +904,26 @@ describe('TT-120..122 regressions: groping, the way back, the dark Counting Room
     assertEnding(g, g.input('wait'), 'death_pike');
   });
 
+  test('TT-105 (R3 note 1): an earlier TURN OFF refusal does not make the dark re-entry fatal unwarned', () => {
+    const g = fresh();
+    feed(g, WALKTHROUGH.slice(0, 89));
+    assert.match(joined(g.input('turn off torch')), /^Switch off your only light/);
+    feed(g, ['s', 'turn off torch']);
+    const t = joined(g.input('n'));
+    assert.equal(snap(g).roomId, 'counting_room');
+    assertRunning(g, 'PLAN §2.5 / STORY §8.4: every dark turn in here is warned once before it kills');
+    assert.match(t, /"One\.\.\." Light\. You need light, now\./);
+    assert.match(t, /Somewhere ahead of you in the black a big man is breathing/);
+    assert.doesNotMatch(t, /Pike is waiting for you, knife low/, 'you cannot see him in the dark');
+    assertEnding(g, g.input('wait'), 'death_pike');
+  });
+
+  test('TT-105: after the refusal, the deliberate second TURN OFF in the room is still fatal at once', () => {
+    const g = fresh();
+    feed(g, [...WALKTHROUGH.slice(0, 89), 'turn off torch', 's', 'n']);
+    assertEnding(g, g.input('turn off torch'), 'death_pike');
+  });
+
   test('msg F: a torch burning on the tunnel floor is not a light in your hand', () => {
     const g = fresh();
     feed(g, [...WALKTHROUGH.slice(0, 88), 'drop torch']);

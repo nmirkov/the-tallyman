@@ -3,6 +3,17 @@
 
 import { ARREST_PIKE, PRY_CABINET, MOVE_DRAWER, TRAP } from '../shared.js';
 
+/**
+ * TIE / USE ROPE (TT-105): the winch post says "You could tie a rope to that", so at the edge,
+ * rope in hand, tying it on is the climb down (the same as DOWN; quarry_floor.onEnter says how).
+ */
+const TIE_ROPE = [
+  { if: [{ in: 'quarry_edge' }, { carried: 'rope' }, 'climbed_down'], say: 'You loop the rope round the winch post again and go down it hand over hand.', movePlayer: 'quarry_floor' },
+  { if: [{ in: 'quarry_edge' }, { carried: 'rope' }], movePlayer: 'quarry_floor' },
+  { if: { in: 'quarry_edge' }, say: "You'll want to be holding it first." },
+  "There's nothing here worth tying it to.",
+];
+
 /* ------------------------------------------------------------------------ *
  *  Rooms                                                                    *
  * ------------------------------------------------------------------------ */
@@ -15,7 +26,7 @@ export const rooms = {
     scenery: [
       { names: ['heather', 'peat'], desc: 'Black and sodden. It would take a footprint and keep it a week.' },
       { names: ['ditch'], desc: "Running water. The Cortina's front wheels are in it." },
-      { names: ['cortina', 'car', 'blue car'], desc: "Harrow's Cortina, J reg, Manchester tax disc. The driver's door hangs open. You could get IN." },
+      { names: ['cortina', 'car', 'blue car', 'door', 'driver door'], desc: "Harrow's Cortina, J reg, Manchester tax disc. The driver's door hangs open. You could get IN." },
       { names: ['glow', 'town'], desc: 'Blackmere, an orange stain in the fog below.' },
     ],
   },
@@ -54,7 +65,7 @@ export const rooms = {
     exits: { w: 'tally_stone', d: 'quarry_floor', in: 'quarry_hut' },
     sink: 'It falls a long way and the black water takes it with a small sound.',
     scenery: [
-      { names: ['face', 'drop', 'quarry'], desc: "Sixty feet of wet gritstone. Without a rope you'd never make it down alive." },
+      { names: ['face', 'drop', 'quarry', 'lip', 'edge', 'quarry edge'], desc: "Sixty feet of wet gritstone. Without a rope you'd never make it down alive." },
       { names: ['water', 'spoil', 'heaps'], desc: "Black water at the bottom, grey spoil around it. A ring of stones by a boulder - somebody's fire." },
       { names: ['winch post', 'post', 'winch'], desc: 'An iron post sunk in concrete. You could tie a rope to that.' },
       {
@@ -78,7 +89,7 @@ export const rooms = {
     scenery: [
       { names: ['brazier'], desc: 'Full of rainwater with a skin of rust on it.' },
       { names: ['calendar'], desc: 'MARCH 1968. A Pirelli girl, faded to a ghost. The quarry closed that spring.' },
-      { names: ['workbench', 'bench'], desc: 'Rust and droppings.' },
+      { names: ['workbench', 'bench', 'rust', 'droppings', 'mouse droppings'], desc: 'Rust and droppings.' },
       { names: ['door'], desc: 'Hanging by one hinge, banging softly in the wind.' },
     ],
   },
@@ -93,6 +104,8 @@ export const rooms = {
       { names: ['car', 'burnt-out car'], desc: 'A Ford Anglia, burnt to the frame years ago. Joyriders, or insurance.' },
       { names: ['boulder', 'fire', 'ring', 'stones', 'ash'], desc: "Years of small fires in the same place. Somebody's private place. Somebody who liked to be alone with something." },
       { names: ['path'], desc: 'A goat track up the spoil. Steep, but you can manage it going up.' },
+      { names: ['spoil', 'heaps', 'spoil heaps', 'heap'], desc: 'Grey shale tipped off the face and left to slump in the rain. The goat track picks its way up through it.' },
+      { names: ['face', 'edge', 'lip', 'quarry'], desc: 'Sixty feet of wet gritstone going up into the fog. The goat track is the only way back to the edge.' },
     ],
     onEnter: [
       {
@@ -146,6 +159,7 @@ export const items = {
     name: 'rope', names: ['rope', 'coil'], adjectives: ['long', 'coiled'], location: 'quarry_hut', critical: true,
     initial: 'A long coil of rope hangs from a nail.',
     desc: 'Sixty feet of hemp, stiff with cold but sound. Enough to get down a quarry face, with something to tie it to.',
+    before: { tie: TIE_ROPE, use: TIE_ROPE },
   },
   exercise_book: {
     name: 'exercise book', names: ['exercise book', 'jotter', 'book'], adjectives: ['swollen', 'child', 'school'], location: 'quarry_floor',

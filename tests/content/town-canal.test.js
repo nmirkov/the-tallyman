@@ -76,7 +76,7 @@ describe('bundle', () => {
     const awards = Object.values(content.scoring.awards);
     assert.equal(awards.length, 13);
     assert.equal(awards.reduce((n, a) => n + a.points, 0), 100);
-    assert.equal(FLAGS.length, 26);
+    assert.equal(FLAGS.length, 28); // TT-105: + torch_off_warned, pike_fled
   });
 
   test('every prose string is verbatim from STORY.md', () => {

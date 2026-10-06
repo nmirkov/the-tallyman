@@ -8,7 +8,7 @@ export const caseDef = {
   cancelText: '(You hold your tongue.)',
   correct: [
     {
-      if: { in: 'police_house' }, sfx: 'sting', award: 'accusation', move: { pike: null },
+      if: { in: 'police_house' }, sfx: 'sting', award: 'accusation', move: { pike: null }, setFlag: 'pike_fled',
       setVar: { pikeState: 'fled', pikeArrivalTurn: { turnPlus: 5 } },
       say: '"Arthur Pike, I am arresting you for the murders of Edna Ashworth, Walter Crabtree, Dennis Holt and Ivy Marsh -" He stands. He is very big. For a moment his face is quite empty, a slate wiped clean. Then he puts both hands on the counter and vaults it, and his shoulder takes you into the wall. By the time you are up, the door is banging in the wind and he is gone into the rain without his helmet. You know where. Under the mill. To Frank.',
     },

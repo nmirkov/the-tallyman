@@ -93,6 +93,17 @@ export const rooms = {
       { names: ['table', 'wages table'], desc: 'A long table where the wages were counted out in 1912. Coins are still stuck to it with old wax, in piles of four.' },
       { names: ['rings', 'iron rings'], desc: 'Iron rings set in the brick. Harrow is chained to two of them.' },
       { names: ['strokes', 'marks', 'wall', 'gate'], desc: 'Four strokes, each as long as a man, cut deep with a chisel. Room for one more across them. You understand exactly whose length the fifth is meant to be.' },
+      // TT-105: every noun of the desc, Pike's `here` line and his greeting resolves in here.
+      {
+        names: ['knife', 'butcher knife'], adjectives: ['long', 'butcher'],
+        desc: [
+          { if: { var: 'pikeState', eq: 'restrained' }, text: 'On the brick where it fell, well out of his reach. It can stay there for Manchester.' },
+          { text: "A butcher's knife, a foot of it, honed thin. He holds it low and easy, the way another man would hold a pencil." },
+        ],
+      },
+      { names: ['tunic', 'uniform'], desc: "Pike's tunic, folded square on the wages table. The second button down is missing. A thread hangs where it was." },
+      { names: ['door'], adjectives: ['iron'], desc: 'The iron door to the tunnel, standing ajar. Pike left himself a way out.' },
+      { names: ['vault', 'brick', 'bricks', 'ceiling'], desc: 'Victorian brick, black with damp, low enough to touch. It gives your own breathing back to you.' },
       { names: ['trap', 'ladder', 'rungs', 'bolt'], desc: "Iron rungs climb to a trap in the ceiling - the counting house above. Pike's door. It is bolted from this side and his padlock hangs locked through the bolt. His key, not yours." },
       {
         names: ['beam', 'bar'],
@@ -109,6 +120,8 @@ export const rooms = {
         say: 'Pike turns from the wall. He has taken off his tunic and folded it on the wages table, and he holds a long butcher\'s knife low against his leg. "You\'re early, Sergeant," he says. "I\'ve one more to count."',
         then: BLEED_CUE,
       },
+      // Felt your way back in with the torch off (A8.3 step 4): you cannot see him (TT-105).
+      { if: [{ var: 'pikeState', eq: 'counting' }, { lit: false }], style: 'alert', say: 'Somewhere ahead of you in the black a big man is breathing, slow and even, close enough to touch.' },
       { if: { var: 'pikeState', eq: 'counting' }, style: 'alert', say: 'Pike is waiting for you, knife low. He has started counting again.', then: BLEED_CUE },
       BLEED_CUE,
     ],

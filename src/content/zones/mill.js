@@ -33,8 +33,8 @@ export const rooms = {
       in: { to: 'mill_yard', if: 'mill_chain_cut', msg: CHAINED },
     },
     scenery: [
-      { names: ['gates', 'gate'], desc: 'Wrought iron, the word ASHWORTH worked into the top in letters a foot high. Spikes.' },
-      { names: ['mill', 'windows', 'tiers'], desc: 'Seven storeys. Hundreds of windows, all black, all looking at you.' },
+      { names: ['gates', 'gate', 'bar', 'bars'], desc: 'Wrought iron, the word ASHWORTH worked into the top in letters a foot high. Spikes.' },
+      { names: ['mill', 'windows', 'window', 'tiers'], desc: 'Seven storeys. Hundreds of windows, all black, all looking at you.' },
       { names: ['notice', 'demolition notice', 'gatepost'], desc: "BLACKMERE BOROUGH COUNCIL. DEMOLITION ORDER. Ashworth's Mill. Works commence 3rd December 1984. Someone has drawn four strokes across the date." },
     ],
   },
@@ -48,6 +48,7 @@ export const rooms = {
       { names: ['cobbles'], desc: 'Setts, worn into ruts by a century of carts.' },
       { names: ['chimney'], desc: "Two hundred feet of brick. It hasn't smoked since 1971." },
       { names: ['steps'], desc: 'Down to the boiler room. Dark down there.' },
+      { names: ['door', 'counting-house door'], desc: 'A plain door under the lamp, its paint long gone. The counting house is through it, north.' },
     ],
     onEnter: { if: '!entered_mill', setFlag: 'entered_mill', award: 'mill_entered', say: 'Somewhere up in the dark, a loom shuttle clacks once. Then nothing.' },
   },
@@ -79,8 +80,8 @@ export const rooms = {
     ],
     exits: { s: 'mill_yard' },
     scenery: [
-      { names: ['desks', 'high desks'], desc: "Clerks' desks, stool-high. Inkwells dried to black crust." },
-      { names: ['windows', 'wages windows', 'bars'], desc: 'Barred hatches the girls queued at on Fridays. A brass plate: NO CREDIT WITHOUT THE BOOK.' },
+      { names: ['desks', 'desk', 'high desks', 'tallest desk'], adjectives: ['high', 'tallest'], desc: "Clerks' desks, stool-high. Inkwells dried to black crust." },
+      { names: ['windows', 'window', 'wages windows', 'bars'], desc: 'Barred hatches the girls queued at on Fridays. A brass plate: NO CREDIT WITHOUT THE BOOK.' },
       { names: ['mice'], desc: 'You hear them. They are the only things in here still keeping accounts.' },
     ],
     // LISTEN / LISTEN TO TRAP / FLOOR: Harrow praying below (pointer, STORY §7.2 step 15).
@@ -106,6 +107,8 @@ export const rooms = {
       { names: ['boilers', 'boiler'], desc: 'Two of them, thirty feet long, riveted. Their fireboxes are cold mouths.' },
       { names: ['pipes'], desc: "Lagged with something you'd rather not breathe." },
       { names: ['coal', 'heap', 'coal heap'], desc: 'Old coal, gone grey.' },
+      { names: ['steps'], desc: 'Stone steps up to the yard, and the lamp.' },
+      { names: ['floor'], desc: 'Brick, gritty with coal dust. The hatch is set in it between the boilers.' },
       {
         names: ['ladder'],
         desc: [
@@ -146,7 +149,7 @@ export const items = {
     before: { tear: TEAR_PAGE, pull: TEAR_PAGE },
   },
   iron_trap: {
-    name: 'iron trap', names: ['trap', 'trapdoor', 'iron trap'], adjectives: ['iron', 'floor'], location: 'counting_house', scenery: true,
+    name: 'iron trap', names: ['trap', 'trapdoor', 'iron trap', 'padlock', 'disc padlock', 'hasp'], adjectives: ['iron', 'floor', 'disc'], location: 'counting_house', scenery: true,
     desc: [
       { if: PIKE_BELOW, text: "The iron trap, its padlock gone. Bolted from beneath. Pike's door is shut behind him." },
       { text: 'An iron trap two feet square, a squat disc padlock through the hasp. The steel round the keyhole is bright with use. Someone comes and goes here, often.' },
@@ -155,7 +158,7 @@ export const items = {
   },
   // A door between the boiler room and the tunnel (STORY §3.3).
   boiler_hatch: {
-    name: 'hatch', names: ['hatch', 'boiler hatch', 'manhole'], adjectives: ['round', 'iron', 'boiler', 'rusty'],
+    name: 'hatch', names: ['hatch', 'boiler hatch', 'manhole', 'rim'], adjectives: ['round', 'iron', 'boiler', 'rusty'],
     location: 'boiler_room', alsoIn: ['tunnel'],
     fixed: true, openable: true, open: false,
     desc: [

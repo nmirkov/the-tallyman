@@ -137,7 +137,7 @@ describe('the iron door before Pike goes down', () => {
     say(g, 'oil hatch');
     say(g, 'open hatch');
     assert.match(say(g, 'u'), /^Boiler Room\n/);
-    assert.equal(say(g, 'x steps'), "You can't see any such thing.");
+    assert.equal(say(g, 'x steps'), 'Stone steps up to the yard, and the lamp.', 'each room has its own steps (TT-105)');
     assert.match(say(g, 'd'), /^Tunnel\n/);
     assert.equal(say(g, 'x steps'), 'Up to the morgue.');
     assert.match(say(g, 'x marks'), /^Gates of five every few yards/);

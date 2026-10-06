@@ -12,9 +12,10 @@ export const rooms = {
     desc: 'Ashcombe Asylum, closed 1979. The gates are chained, the lodge bricked up, though a lamp still burns over it for no one. At the foot of the wall a coal chute gapes, its lid long gone. The moor road runs south.',
     exits: { s: 'tally_stone', d: 'coal_chute', in: 'coal_chute' },
     scenery: [
-      { names: ['gates'], desc: 'Chained, padlocked and welded for good measure. The council meant it.' },
+      { names: ['gates', 'chain', 'padlock'], desc: 'Chained, padlocked and welded for good measure. The council meant it.' },
       { names: ['lodge', 'lamp'], desc: 'Bricked up. The lamp over the door is on a timer nobody remembered to cancel.' },
       { names: ['chute', 'coal chute', 'lid'], desc: 'A square black mouth at the foot of the wall, big enough for a man. The coal dust around it is scuffed by boots. You could go DOWN.' },
+      { names: ['wall'], desc: 'Soot-black brick, eighteen feet of it, built to keep people in. The chute is the only way through.' },
       { names: ['building', 'clock tower', 'tower'], desc: 'A long range of windows and a clock tower with no clock in it. Just a round hole, like an eye.' },
     ],
   },
@@ -40,6 +41,8 @@ export const rooms = {
       { names: ['hatch', 'reception', 'reception hatch'], desc: "PLEASE RING. There's no bell." },
       { names: ['noticeboard', 'rotas', 'board'], desc: 'Staff rotas for March 1979. At the bottom, a typed notice: ADOLESCENT WARD - NIGHT CHECKS EVERY 15 MIN. PATIENT P. TO BE COUNTED IN PERSON.' },
       { names: ['windows', 'moonlight'], desc: 'Tall, arched, filthy. The moon comes and goes behind the fog.' },
+      { names: ['stair', 'stairs'], desc: 'Stone steps going down to the morgue. Colder with every one.' },
+      { names: ['cellar'], desc: 'The coal cellar, south, at the foot of the chute.' },
     ],
   },
 
@@ -50,7 +53,7 @@ export const rooms = {
     scenery: [
       { names: ['shelves', 'box files', 'files', 'boxes'], desc: 'Thousands of files. Damp has married most of them into a single block. Only the steel cabinet has kept anything dry.' },
       { names: ['typewriter'], desc: "An Olympia. A sheet still in it: 'Dear Mrs'. Nothing more." },
-      { names: ['lamp', 'window'], desc: 'The lodge lamp. Orange light, orange dust.' },
+      { names: ['lamp', 'window', 'lodge'], desc: 'The lodge lamp. Orange light, orange dust.' },
     ],
   },
 
@@ -62,7 +65,7 @@ export const rooms = {
       { names: ['beds', 'bed', 'iron beds'], adjectives: ['iron', 'stripped'], desc: 'Iron frames, springs rusted to lace. A brass number on each foot.' },
       { names: ['bed nine', 'nine', '9'], adjectives: ['ninth'], desc: 'Bed 9. Scratched into the iron of the footboard: A.P.' },
       { names: ['marks', 'tally marks', 'pencil', 'wall'], desc: 'Gates of five, row after row, thousands. A boy counted something here every night for four years. Near the top the rows go wrong - the fifth stroke missing, again and again. Four, four, four.' },
-      { names: ['drip', 'water'], desc: 'From the ceiling into a puddle. Drip. Drip. You catch yourself counting.' },
+      { names: ['drip', 'water', 'ceiling'], desc: 'From the ceiling into a puddle. Drip. Drip. You catch yourself counting.' },
     ],
     // Once, and only with a light (STORY §9.2).
     onEnter: {
@@ -85,7 +88,8 @@ export const rooms = {
       },
     },
     scenery: [
-      { names: ['tiles'], desc: 'White, crazed, a few missing like teeth.' },
+      { names: ['tiles', 'floor'], desc: 'White, crazed, a few missing like teeth.' },
+      { names: ['stair', 'stairs'], desc: 'Up to the entrance hall.' },
       { names: ['drain'], desc: 'A brass grating. It smells of the canal.' },
       { names: ['slab'], desc: 'Porcelain. Empty. Clean. Cleaner than anything else in the building.' },
       {
@@ -123,7 +127,7 @@ export const items = {
     },
   },
   drawer_four: {
-    name: 'drawer 4', article: '', names: ['drawer', 'drawer 4', 'drawer four'], adjectives: ['fourth', 'four', '4'], location: 'morgue', fixed: true,
+    name: 'drawer 4', article: '', names: ['drawer', 'drawer 4', 'drawer four', 'rails', 'runners'], adjectives: ['fourth', 'four', '4'], location: 'morgue', fixed: true,
     desc: [
       { if: 'morgue_hatch_found', text: 'Drawer 4, run back into the wall. The hatch yawns beneath it.' },
       { text: 'Drawer 4 stands a finger-width proud of the rest. It does not close. Its runners shine with grease - the only clean metal in the room.' },
@@ -134,7 +138,7 @@ export const items = {
     },
   },
   drawers: {
-    name: 'drawers', names: ['drawers'], adjectives: ['other', 'steel'], location: 'morgue', scenery: true,
+    name: 'drawers', names: ['drawers', 'wall'], adjectives: ['other', 'steel'], location: 'morgue', scenery: true,
     desc: 'Eight steel drawers. Seven are rusted shut and empty. Number 4 does not sit flush.',
     before: { open: 'Rusted shut, all but number 4.', pull: 'Rusted shut, all but number 4.' },
   },

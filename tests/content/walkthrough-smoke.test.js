@@ -247,7 +247,8 @@ describe('STORY §12.3 other outcomes', () => {
     assert.match(t, /^Switch off your only light, with Pike and his knife in here\?/);
     assert.match(t, /He circles, knife low\./);
     assert.equal(g.snapshot().items.torch.lit, true);
-    assert.equal(g.snapshot().flags.dark_warned, true);
+    assert.equal(g.snapshot().flags.torch_off_warned, true);
+    assert.equal(g.snapshot().flags.dark_warned, undefined, 'the refusal alone does not arm the dark counter (TT-105)');
     const ev = g.input('turn off torch');
     const end = assertEnding({ g, ev }, 'death_pike', 91);
     assert.equal(g.snapshot().items.torch.lit, false);

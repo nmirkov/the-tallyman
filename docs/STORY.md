@@ -247,11 +247,16 @@ rules: { start: 'platform', money: 500, intro: '(see §1.6)', darkPicture: 'dark
   nerve: { start: 10,
     panicText: 'Your nerve goes. You run.',
     messages: [
-      { at: 50, text: 'Your hands will not stop shaking. Find some light, somewhere warm.' },
-      { at: 75, text: 'Every shadow has a shape now. Get back to the lamps.' },
+      { at: 50, text: [
+        { if: { zone: 'beneath' }, text: 'Your hands will not stop shaking. The torch beam shakes with them. Breathe.' },
+        { text: 'Your hands will not stop shaking. Find some light, somewhere warm.' } ] },
+      { at: 75, text: [
+        { if: { zone: 'beneath' }, text: 'Every shadow down here has a shape now. Think of Frank. Keep going.' },
+        { text: 'Every shadow has a shape now. Get back to the lamps.' } ] },
       { at: 90, text: 'You can hear your own heart. Something is about to give.' },
     ] } },
 ```
+(Beneath has no lamps to run to and never panics, so the 50 and 75 lines have Beneath variants - TT-105.)
 Safe rooms are lit, non-dark, hazard-free and in their zone (L16): `market_square`, `towpath`,
 `moor_road`, `mill_yard`, `asylum_gates`.
 
@@ -395,7 +400,8 @@ Blocked-exit messages:
   The only other way in is the darkness rule's way back (A8.3 step 4, A17 C39): a player who
   walked out of the Counting Room into a dark tunnel can always feel their way back in, which is
   what keeps a torch left in there retrievable (TT-121). Entering the room dark that way with Pike
-  still counting is covered by the attack counter's own warning (§8.4: warned once, then fatal).
+  still counting is covered by the attack counter's own warning (§8.4: warned once, then fatal) -
+  always, even if a TURN OFF in there was refused earlier (that refusal has its own flag, TT-105).
 
 **Why the iron door opens (PLAN R3 note).** The beam that bars it lies on the Counting Room
 side. Pike himself comes and goes by his own trap in the counting-house floor (padlocked,
@@ -475,7 +481,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - desc: "A red phone box, glass fogged, smelling of fag ends. The directory has been torn out page by page. A card above the phone says MINIMUM CALL 10p, and someone has scratched four strokes into the paint beside it. The square is out."
 - items here: `payphone` (scenery, §5).
 - scenery:
-  - `directory, book, pages` -> "Just the spine and the letters A to C. Someone wanted the rest."
+  - `directory, book, pages, page` -> "Just the spine and the letters A to C. Someone wanted the rest."
   - `card, notice` -> "MINIMUM CALL 10p. FOR EMERGENCIES DIAL 999. In biro underneath: DONT."
   - `strokes, scratches, marks, paint` -> "Four strokes. Neat, deliberate, about the height of a big man's eyes."
   - `glass` -> "Fogged with your own breath. You wipe a hole. The square, the cross, the rain."
@@ -503,6 +509,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `bedspread, bed, candlewick` -> "Pink candlewick. He hasn't slept in it. He hasn't even sat on it."
   - `gas ring, ring` -> "A kettle on it, cold."
   - `window` -> "Rain, and beyond it the dark lump of the moor."
+  - `stair, stairs` -> "Down to the bar. The carpet is worn through on every tread." (TT-105)
   - `jacket, coat` -> "His sports jacket, elbow patches. On the belt hanging with it, an empty handcuff pouch. He took his cuffs with him." (cuffs pointer)
   - `pouch, handcuff pouch, belt` -> "Black leather, police issue, empty. Wherever Frank went, his handcuffs went too."
   - `chair` -> "A hard chair. His jacket on it."
@@ -515,7 +522,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 #### `police_house` - Police House
 - zone town · dark no · safe no · nerve 0 · ambient `none` · picture `police_house`
 - desc variants:
-  - `{ if: { var: 'pikeState', eq: 'fled' } }`: "The front office of the Police House. The counter flap is up, the occurrence book open on the desk, and Pike's helmet lies on the floor where it fell. The clock ticks for nobody. The cells are east. The square is west."
+  - `{ if: 'pike_fled' }` (set by the ACCUSE that makes him run, §8.1; it outlasts `fled`, so the helmet is still on the floor once he is in the Counting Room - TT-105): "The front office of the Police House. The counter flap is up, the occurrence book open on the desk, and Pike's helmet lies on the floor where it fell. The clock ticks for nobody. The cells are east. The square is west."
   - `{ if: { var: 'pikeState', oneOf: ['left', 'counting', 'restrained'] } }`: "The front office of the Police House. Empty. The kettle is still warm and the occurrence book lies open on the desk. Pike's cape is gone from its peg. The clock ticks. The cells are east. The square is west."
   - (default): "The front office of the Police House: a counter, a kettle, a wall clock that ticks too loudly, a desk with the occurrence book open on it. Wanted posters curl on a board. The cells are east. The square is west."
 - NPC here: `pike` (until he leaves). Item here: `occurrence_book` (fixed, readable).
@@ -525,17 +532,21 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `clock, wall clock` -> "A railway clock. Its tick fills the room. It is right, to the second."
   - `desk` -> "Tidy to a fault. Pencils in a jar in fours. The occurrence book lies open."
   - `posters, board, wanted posters` -> "Faces from 1981. A missing dog. A Neighbourhood Watch leaflet with the Tallyman's tally drawn on it in biro by some wag."
-  - `helmet` -> `[{ if: { var: 'pikeState', eq: 'fled' }, text: 'Pike's helmet, upturned. He went out without it, in a hurry.' }, { text: 'On its peg, polished.' }]`
-  - `peg, pegs, cape` -> "A row of pegs by the door. Pike's cape hangs there - a long police cape, the old kind." (Silas's "cape" pointer)
+  - `helmet` -> `[{ if: 'pike_fled', text: 'Pike's helmet, upturned. He went out without it, in a hurry.' }, { text: 'On its peg, polished.' }]`
+  - `peg, pegs, cape` -> `[{ if: { var: 'pikeState', eq: 'desk' }, text: "A row of pegs by the door. Pike's cape hangs there - a long police cape, the old kind." }, { text: "A row of pegs by the door. Pike's peg is empty: his cape has gone out into the rain with him." }]` (Silas's "cape" pointer; the second after he flees or leaves - TT-105)
+  - `floor, lino` -> `[{ if: 'pike_fled', text: "Brown lino, worn pale in front of the counter. Pike's helmet lies upturned where it fell." }, { text: 'Brown lino, worn pale in front of the counter.' }]` (TT-105)
 - picture brief: interior: wooden counter across lower third, desk with green-shaded lamp and open white book, big round clock top-centre, blue lamp glow through the window top-left, Pike as a large dark-blue uniformed figure behind the counter (omit him? - no: draw him; the UI shows the same picture after he leaves, so draw the desk scene WITHOUT Pike to stay correct in every state). No fx.
 
 #### `cells` - Cells
 - zone town · dark no · safe no · nerve 0 · ambient `none` · picture `cells`
-- desc: "Two cells, doors open, a bucket in each. A black police bicycle leans in the corridor. Someone has scratched four strokes low on the wall of the far cell, very neat. The front office is west."
+- desc variants (Pike rides off when he flees or leaves - Silas's bike lamp, the got-away ending; TT-105):
+  - `{ var: 'pikeState', ne: 'desk' }`: "Two cells, doors open, a bucket in each. The corridor is empty: Pike's bicycle has gone, leaving moor mud on the tiles. Someone has scratched four strokes low on the wall of the far cell, very neat. The front office is west."
+  - (default): "Two cells, doors open, a bucket in each. A black police bicycle leans in the corridor. Someone has scratched four strokes low on the wall of the far cell, very neat. The front office is west."
 - scenery:
   - `cells, cell, doors` -> "Empty. Blackmere doesn't lock many people up. It prefers to talk about them."
   - `bucket, buckets` -> "Galvanised. Clean. Pike runs a tidy station."
-  - `bicycle, bike` (adj `police, black`) -> "Pike's bicycle, upright and heavy. Fresh moor mud caked in the tyres, and black coal dust ground into the chain." (pointer: moor + coal chute)
+  - `bicycle, bike, mud` (adj `police, black, moor`) -> `[{ if: { var: 'pikeState', ne: 'desk' }, text: 'Gone. A smear of moor mud on the tiles where it leaned.' }, { text: "Pike's bicycle, upright and heavy. Fresh moor mud caked in the tyres, and black coal dust ground into the chain." }]` (pointer: moor + coal chute)
+  - `corridor, tiles` -> "Brown tiles and green gloss paint, smelling of Jeyes Fluid. Pike mops it himself." (TT-105)
   - `strokes, marks, scratches, wall` -> "Four strokes, scratched with something sharp, by someone kneeling. Prisoners do it to count days. Nobody has been held here in a month."
 - picture brief: corridor perspective, grey brick, two cell doors open (dark), black bicycle centre, four white strokes low on the right wall. No fx.
 
@@ -598,7 +609,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - desc: "St Jude's: cold stone, candle smoke and damp hymn books. Fourteen small brass plaques line the north wall. The vestry is east; the porch north opens on the churchyard. Steps lead down to the crypt. The lane is south."
 - NPC here: `ashdown`.
 - scenery:
-  - `plaques, plaque, brass` -> "Fourteen small brass plaques, each engraved with the same date and nothing else: 15 NOVEMBER 1912. No names. The vicar will tell you the names are in the register."
+  - `plaques, plaque, brass, wall` -> "Fourteen small brass plaques, each engraved with the same date and nothing else: 15 NOVEMBER 1912. No names. The vicar will tell you the names are in the register."
   - `pews, pew` -> "Box pews, the doors worn smooth by a century of hands."
   - `candles, candle` -> "A rack of votive candles. Four are burning. You count them without meaning to."
   - `hymn books, books` -> "Ancient and Modern, swollen with damp."
@@ -624,7 +635,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - scenery:
   - `grass` -> "Long, wet, grabbing at your trousers."
   - `headstones, graves, stones` -> "Ashworth. Crabtree. Holt. The old town names, over and over. And Marsh, freshly dug, flowers still in their cellophane."
-  - `girl, statue, stone girl` -> "Carved in clogs and shawl, hands folded. The rain has taken her face. You find you don't like turning your back on her."
+  - `girl, statue, stone girl, face` -> "Carved in clogs and shawl, hands folded. The rain has taken her face. You find you don't like turning your back on her."
   - `gap, wall` -> "Leads to the ginnel behind Chapel Street."
 - picture brief: tilted grey headstones in dark green grass, white stone girl statue centre on a plinth, church wall/porch right, fog bands across the middle. fx `fog`, `rain`.
 
@@ -636,6 +647,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `shelves, coffins, coffin` -> "Lead coffins on stone shelves, labels long gone. Nothing has moved here for a century except the vicar."
   - `chairs` -> "Stacked, broken. Harvest festival 1953, by the look of the bunting."
   - `dust` -> "Thick everywhere - except a trail from the steps to that one stone."
+  - `wall, walls` -> "Rough stone, sweating. One stone sits proud of the rest." (TT-105)
+  - `steps` -> "Up to the church, and the candles." (TT-105)
 - picture brief (lit by torch): low vault in dark grey/brown, torch beam cone (light yellow) from bottom-centre onto the far wall where one stone stands out lighter; coffin shelves in black shapes both sides. No fx.
 
 ### 4.2 Canal (5 rooms)
@@ -660,6 +673,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `flowers, cellophane` -> "Chrysanthemums, brown now. The card says: WALTER - FROM THE LADS AT THE BOWLING CLUB."
   - `mill` -> "Ashworth's Mill. Seven storeys of black. A chimney like a finger raised for silence."
   - `water, canal` -> "Black and quiet. You keep to the middle of the path."
+  - `steps` -> "Worn stone, up to the bridge." (TT-105)
 - before: `swim` -> "Into November canal water? There are easier ways to catch your death, and you're trying to avoid them all tonight."
 - picture brief: path along the canal (black water bottom-third), single white bulb on a pole centre with a yellow halo, brown flowers at its foot, the mill as a huge black block with a chimney on the left horizon. fx `rain`, `fog`.
 
@@ -685,7 +699,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `rocking chair, chair` -> "Silas's chair. It rocks on its own a moment after he stops."
   - `whippet, dog, nell` -> "Grey, thin, asleep - or pretending. Her ears follow you. She never barks."
   - `coat` -> "An army greatcoat, very old. The dog's now."
-  - `clocks, clock, shelves` -> "Dozens of clocks, all stopped, all at different times. 'Can't abide the ticking,' says Silas. 'Sounds like counting.'"
+  - `door` -> "A plank door, out to the lock. The roar of the water comes through it anyway." (TT-105)
+  - `clocks, clock, shelves, shelf` -> "Dozens of clocks, all stopped, all at different times. 'Can't abide the ticking,' says Silas. 'Sounds like counting.'"
 - picture brief: cosy cramped interior: orange heater glow bottom-left, rocking chair centre with an old man (grey/brown), clocks (white circles) on shelves across the top, grey dog curled bottom-right. No fx.
 
 #### `shed` - Silas's Shed
@@ -707,7 +722,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - scenery:
   - `heather, peat` -> "Black and sodden. It would take a footprint and keep it a week."
   - `ditch` -> "Running water. The Cortina's front wheels are in it."
-  - `cortina, car, blue car` -> "Harrow's Cortina, J reg, Manchester tax disc. The driver's door hangs open. You could get IN."
+  - `cortina, car, blue car, door, driver door` -> "Harrow's Cortina, J reg, Manchester tax disc. The driver's door hangs open. You could get IN."
   - `glow, town` -> "Blackmere, an orange stain in the fog below."
 - picture brief: dark moorland under a black sky, road (grey) diagonal from bottom-left, blue Cortina tilted into the ditch right with its door open, orange town glow bottom-left. fx `fog`.
 
@@ -739,14 +754,14 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - desc: "The lip of Blackmere Quarry. The face drops sixty feet to black water and spoil heaps. An old winch post leans out over the drop. A tin hut squats behind you. The track runs west to the stone."
 - sink: "It falls a long way and the black water takes it with a small sound."
 - scenery:
-  - `face, drop, quarry` -> "Sixty feet of wet gritstone. Without a rope you'd never make it down alive."
+  - `face, drop, quarry, lip, edge, quarry edge` -> "Sixty feet of wet gritstone. Without a rope you'd never make it down alive."
   - `water, spoil, heaps` -> "Black water at the bottom, grey spoil around it. A ring of stones by a boulder - somebody's fire."
   - `winch post, post, winch` -> "An iron post sunk in concrete. You could tie a rope to that."
   - `goat track, path` -> variants `[{ if: 'climbed_down', text: 'The top of the goat track, hidden in the bracken at the lip. From up here you would never have found it.' }, { text: 'No way down that you can see. Not without a rope.' }]`
   - `hut, tin hut` -> "Corrugated tin, door hanging off. IN to go inside."
 - hazard `quarry` (§8.6): `exit: 'd'`, `unless: { any: [{ carried: 'rope' }, 'climbed_down'] }` - once you
   have been down and come back up the goat track, you know where it starts (TT-123, §13).
-- after `go` d with rope: handled by `quarry_floor.onEnter`.
+- after `go` d with rope: handled by `quarry_floor.onEnter`. TIE ROPE (TO POST) / USE ROPE here is the same climb (`rope.before.tie`, §5.2; TT-105). `before.jump` covers JUMP OFF EDGE / LIP.
 - picture brief: cliff edge in the foreground (grey), a black void dropping below, a rusty iron post leaning right, a tin hut silhouette left, wind-blown rain. fx `rain`, `lightning`.
 
 #### `quarry_hut` - Quarry Hut
@@ -756,7 +771,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - scenery:
   - `brazier` -> "Full of rainwater with a skin of rust on it."
   - `calendar` -> "MARCH 1968. A Pirelli girl, faded to a ghost. The quarry closed that spring."
-  - `workbench, bench` -> "Rust and droppings."
+  - `workbench, bench, rust, droppings, mouse droppings` -> "Rust and droppings."
   - `door` -> "Hanging by one hinge, banging softly in the wind."
 - picture brief: corrugated-tin interior in grey/brown, crowbar (dark grey) leaning in a corner, a coil of rope (light brown) on a nail, calendar (faded pink) on the wall. No fx.
 
@@ -771,6 +786,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `car, burnt-out car` -> "A Ford Anglia, burnt to the frame years ago. Joyriders, or insurance."
   - `boulder, fire, ring, stones, ash` -> "Years of small fires in the same place. Somebody's private place. Somebody who liked to be alone with something."
   - `path` -> "A goat track up the spoil. Steep, but you can manage it going up."
+  - `spoil, heaps, spoil heaps, heap` -> "Grey shale tipped off the face and left to slump in the rain. The goat track picks its way up through it." (TT-105)
+  - `face, edge, lip, quarry` -> "Sixty feet of wet gritstone going up into the fog. The goat track is the only way back to the edge." (TT-105)
 - picture brief: looking up from the floor: quarry walls (grey) on three sides, a sliver of black sky, a rusted car shell (brown) left, a stone ring with grey ash and a small pale book beside it. fx `rain`.
 
 ### 4.4 Mill (5 rooms)
@@ -782,8 +799,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - (default): "The gates of Ashworth's Mill: iron, twelve feet high, chained and padlocked. Beyond them the mill rises in black tiers, every window dead. A demolition notice is pasted to the gatepost. The towpath is east."
 - items here: `mill_chain` (scenery item).
 - scenery:
-  - `gates, gate` -> "Wrought iron, the word ASHWORTH worked into the top in letters a foot high. Spikes."
-  - `mill, windows, tiers` -> "Seven storeys. Hundreds of windows, all black, all looking at you."
+  - `gates, gate, bar, bars` -> "Wrought iron, the word ASHWORTH worked into the top in letters a foot high. Spikes."
+  - `mill, windows, window, tiers` -> "Seven storeys. Hundreds of windows, all black, all looking at you."
   - `notice, demolition notice, gatepost` -> "BLACKMERE BOROUGH COUNCIL. DEMOLITION ORDER. Ashworth's Mill. Works commence 3rd December 1984. Someone has drawn four strokes across the date."
 - picture brief: tall black iron gates centre with ASHWORTH lettering, chain and padlock (silver) at the join, mill silhouette behind with a chimney, a white notice on the gatepost. fx `rain`, `lightning`.
 
@@ -796,6 +813,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `cobbles` -> "Setts, worn into ruts by a century of carts."
   - `chimney` -> "Two hundred feet of brick. It hasn't smoked since 1971."
   - `steps` -> "Down to the boiler room. Dark down there."
+  - `door, counting-house door` -> "A plain door under the lamp, its paint long gone. The counting house is through it, north." (TT-105)
 - picture brief: enclosed yard, black mill walls on three sides, one caged lamp (yellow) over a door top-centre, wet cobbles, a dark doorway left (weaving shed), steps down right. fx `rain`.
 
 #### `weaving_shed` - Weaving Shed  (dark)
@@ -818,8 +836,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - (default): "The counting house: high desks, barred wages windows, the smell of ink and mice. On the tallest desk lies a great ledger bound in black. An iron trap is set in the floor, padlocked. The yard is south."
 - items here: `ledger` (scenery supporter), on it: `ledger_page`; `iron_trap` (scenery item).
 - scenery:
-  - `desks, high desks` -> "Clerks' desks, stool-high. Inkwells dried to black crust."
-  - `windows, wages windows, bars` -> "Barred hatches the girls queued at on Fridays. A brass plate: NO CREDIT WITHOUT THE BOOK."
+  - `desks, desk, high desks, tallest desk` (adj `high, tallest`) -> "Clerks' desks, stool-high. Inkwells dried to black crust."
+  - `windows, window, wages windows, bars` -> "Barred hatches the girls queued at on Fridays. A brass plate: NO CREDIT WITHOUT THE BOOK."
   - `mice` -> "You hear them. They are the only things in here still keeping accounts."
 - before: `listen` -> `[{ if: { var: 'harrowFreed', eq: true }, say: 'Nothing beneath the floor now but your own heartbeat.' }, { say: 'You hold your breath. Faintly, from beneath the iron trap, a man's voice: "...forgive us our trespasses, as we forgive..." Someone is alive down there.', setFlag: 'heard_praying', note: 'praying' }]`
 - picture brief: Victorian office, tall desks in brown, a huge black ledger centre on the tallest desk with one pale page sticking out, barred windows right, a round black iron trap with a padlock in the floor bottom-centre. No fx.
@@ -834,6 +852,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `boilers, boiler` -> "Two of them, thirty feet long, riveted. Their fireboxes are cold mouths."
   - `pipes` -> "Lagged with something you'd rather not breathe."
   - `coal, heap, coal heap` -> "Old coal, gone grey."
+  - `steps` -> "Stone steps up to the yard, and the lamp." (TT-105)
+  - `floor` -> "Brick, gritty with coal dust. The hatch is set in it between the boilers." (TT-105)
   - `ladder` -> `[{ if: { open: 'boiler_hatch' }, text: 'Iron rungs, going down.' }, { text: "You can't see one. The hatch is shut." }]`
 - picture brief (torchlit): two huge riveted boiler cylinders left and right in dark red/brown, a round grey hatch in the floor centre, torch cone from below. No fx.
 
@@ -843,9 +863,10 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - zone asylum · dark no · safe **yes** · nerve 0 · ambient (zone: wind) · picture `asylum_gates`
 - desc: "Ashcombe Asylum, closed 1979. The gates are chained, the lodge bricked up, though a lamp still burns over it for no one. At the foot of the wall a coal chute gapes, its lid long gone. The moor road runs south."
 - scenery:
-  - `gates` -> "Chained, padlocked and welded for good measure. The council meant it."
+  - `gates, chain, padlock` -> "Chained, padlocked and welded for good measure. The council meant it."
   - `lodge, lamp` -> "Bricked up. The lamp over the door is on a timer nobody remembered to cancel."
   - `chute, coal chute, lid` -> "A square black mouth at the foot of the wall, big enough for a man. The coal dust around it is scuffed by boots. You could go DOWN."
+  - `wall` -> "Soot-black brick, eighteen feet of it, built to keep people in. The chute is the only way through." (TT-105)
   - `building, clock tower, tower` -> "A long range of windows and a clock tower with no clock in it. Just a round hole, like an eye."
 - picture brief: chained iron gates in the foreground, long asylum range behind with a clock tower whose face is an empty black circle, a lamp (yellow) over a bricked lodge left, a black chute mouth bottom-right. fx `fog`, `lightning`.
 
@@ -867,6 +888,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `hatch, reception, reception hatch` -> "PLEASE RING. There's no bell."
   - `noticeboard, rotas, board` -> "Staff rotas for March 1979. At the bottom, a typed notice: ADOLESCENT WARD - NIGHT CHECKS EVERY 15 MIN. PATIENT P. TO BE COUNTED IN PERSON."
   - `windows, moonlight` -> "Tall, arched, filthy. The moon comes and goes behind the fog."
+  - `stair, stairs` -> "Stone steps going down to the morgue. Colder with every one." (TT-105)
+  - `cellar` -> "The coal cellar, south, at the foot of the chute." (TT-105)
 - picture brief: tiled floor (black/white checker) in perspective, arched windows letting in pale blue moonlight shafts, a reception hatch centre, a dark stairwell bottom-right. fx `fog`.
 
 #### `records_office` - Records Office
@@ -876,7 +899,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 - scenery:
   - `shelves, box files, files, boxes` -> "Thousands of files. Damp has married most of them into a single block. Only the steel cabinet has kept anything dry."
   - `typewriter` -> "An Olympia. A sheet still in it: 'Dear Mrs'. Nothing more."
-  - `lamp, window` -> "The lodge lamp. Orange light, orange dust."
+  - `lamp, window, lodge` -> "The lodge lamp. Orange light, orange dust."
 - picture brief: grey steel cabinet centre with a P-R label, shelves of brown boxes either side, orange light through a window top-left, a black typewriter on a desk. No fx.
 
 #### `ward` - Adolescent Ward  (dark)
@@ -887,7 +910,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `beds, bed, iron beds` -> "Iron frames, springs rusted to lace. A brass number on each foot."
   - `bed nine, nine, 9` -> "Bed 9. Scratched into the iron of the footboard: A.P."
   - `marks, tally marks, pencil, wall` -> "Gates of five, row after row, thousands. A boy counted something here every night for four years. Near the top the rows go wrong - the fifth stroke missing, again and again. Four, four, four."
-  - `drip, water` -> "From the ceiling into a puddle. Drip. Drip. You catch yourself counting."
+  - `drip, water, ceiling` -> "From the ceiling into a puddle. Drip. Drip. You catch yourself counting."
 - picture brief (torchlit): row of iron bed frames receding left to right, the wall above one bed covered in fine grey pencil tally rows up to the ceiling, torch cone. fx `flicker`.
 
 #### `morgue` - Morgue  (dark)
@@ -897,7 +920,8 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - (default): "The morgue: white tiles, a drain in the floor, a slab, and a wall of steel drawers numbered 1 to 8. Drawer 4 does not sit flush with the rest. The stair leads up."
 - items here: `drawer_four` (fixed item), `drawers` (scenery item for the other seven).
 - scenery:
-  - `tiles` -> "White, crazed, a few missing like teeth."
+  - `tiles, floor` -> "White, crazed, a few missing like teeth."
+  - `stair, stairs` -> "Up to the entrance hall." (TT-105)
   - `drain` -> "A brass grating. It smells of the canal."
   - `slab` -> "Porcelain. Empty. Clean. Cleaner than anything else in the building."
   - `hatch, rungs` -> `[{ if: 'morgue_hatch_found', text: 'A square hatch under the drawer, iron rungs going down into black. A cold draught comes up it, smelling of brick and canal.' }, { text: "You see no hatch." }]`
@@ -933,6 +957,10 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `table, wages table` -> "A long table where the wages were counted out in 1912. Coins are still stuck to it with old wax, in piles of four."
   - `rings, iron rings` -> "Iron rings set in the brick. Harrow is chained to two of them."
   - `strokes, marks, wall, gate` -> "Four strokes, each as long as a man, cut deep with a chisel. Room for one more across them. You understand exactly whose length the fifth is meant to be."
+  - `knife, butcher knife` (adj `long, butcher`) -> `[{ if: { var: 'pikeState', eq: 'restrained' }, text: 'On the brick where it fell, well out of his reach. It can stay there for Manchester.' }, { text: "A butcher's knife, a foot of it, honed thin. He holds it low and easy, the way another man would hold a pencil." }]` (TT-105)
+  - `tunic, uniform` -> "Pike's tunic, folded square on the wages table. The second button down is missing. A thread hangs where it was." (a noun of its own, so it wins over the button's `tunic button`, A6.3 M4a) (TT-105)
+  - `door` (adj `iron`) -> "The iron door to the tunnel, standing ajar. Pike left himself a way out." (TT-105)
+  - `vault, brick, bricks, ceiling` -> "Victorian brick, black with damp, low enough to touch. It gives your own breathing back to you." (TT-105)
   - `trap, ladder, rungs, bolt` -> "Iron rungs climb to a trap in the ceiling - the counting house above. Pike's door. It is bolted from this side and his padlock hangs locked through the bolt. His key, not yours." 
   - `beam, bar` -> `[{ if: { at: ['pike', 'counting_room'] }, text: 'The bar that held the iron door, leaned against the wall. Pike lifted it when he came down. His way out.' }, { text: 'The bar is in its brackets across the door.' }]`
 - picture brief (torchlit): brick vault, four huge white strokes on the back wall, a chained figure (Harrow: grey hair, white shirt with a dark stain) hanging beneath, a long table foreground. Pike is NOT drawn (state varies). fx `flicker`.
@@ -966,7 +994,7 @@ Legend: **P** portable · **C** `critical: true` · **H** `hidden: true` · **Pe
 | `button` | silver button / button, tunic button / silver, police, crown, tunic | `candle_stub` | P C H | **Ev `ev_button`** |
 | `dustbin` | dustbin / dustbin, dustbins, bin, bins / metal | `back_alley` | scenery, container | newspaper inside |
 | `newspaper` | newspaper / newspaper, paper, bugle / blackmere, wet | `dustbin` | P H | readable (lore) |
-| `register` | burial register / register, burial register, parish register / burial, parish | `vestry` | scenery | **Ev `ev_register`** (fact) |
+| `register` | burial register / register, burial register, parish register, pages / burial, parish | `vestry` | scenery | **Ev `ev_register`** (fact) |
 | `memorial` | memorial / memorial, plinth, inscription / | `churchyard` | scenery | readable |
 | `loose_stone` | loose stone / stone, loose stone, mortar / loose, proud | `crypt` | scenery | moving reveals letters |
 | `love_letters` | bundle of letters / letters, bundle, tin, toffee tin / love | `crypt` | P H | red herring |
@@ -982,12 +1010,12 @@ Legend: **P** portable · **C** `critical: true` · **H** `hidden: true` · **Pe
 | `mill_chain` | gate chain / chain, padlock / gate, heavy | `mill_gates` | scenery | CUT target |
 | `ledger` | ledger / ledger, debt ledger, tally book / great, black, 1912 | `counting_house` | scenery, supporter | readable |
 | `ledger_page` | loose ledger page / page, ledger page, last page / loose, ledger, last, 1912 | `ledger` | P C | **Ev `ev_ledger`** |
-| `iron_trap` | iron trap / trap, trapdoor, iron trap / iron, floor | `counting_house` | scenery | Pike's; never opens |
-| `boiler_hatch` | hatch / hatch, boiler hatch, manhole / round, iron, boiler, rusty | `boiler_room`, alsoIn `tunnel` | door: fixed, openable | oil, then open |
+| `iron_trap` | iron trap / trap, trapdoor, iron trap, padlock, disc padlock, hasp / iron, floor, disc | `counting_house` | scenery | Pike's; never opens |
+| `boiler_hatch` | hatch / hatch, boiler hatch, manhole, rim / round, iron, boiler, rusty | `boiler_room`, alsoIn `tunnel` | door: fixed, openable | oil, then open |
 | `cabinet` | cabinet / cabinet, filing cabinet / steel, rusted, p-r | `records_office` | fixed, openable, locked, container | crowbar |
 | `patient_file` | patient file / file, patient file, folder / patient, manila, pike | `cabinet` | P C | **Ev `ev_file`** |
-| `drawer_four` | drawer 4 / drawer, drawer 4, drawer four / fourth, four, 4 | `morgue` | fixed | slides -> hatch |
-| `drawers` | drawers / drawers / other, steel | `morgue` | scenery | |
+| `drawer_four` | drawer 4 / drawer, drawer 4, drawer four, rails, runners / fourth, four, 4 | `morgue` | fixed | slides -> hatch |
+| `drawers` | drawers / drawers, wall / other, steel | `morgue` | scenery | |
 | `chains` | chains / chains, chain, shackles, manacles / iron, heavy | `counting_room` | scenery | CUT target |
 
 Disambiguation check (L13): shared nouns among things that can meet in one scope - `page`
@@ -1007,9 +1035,14 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 - desc: `[{ if: { on: 'torch' }, text: 'A police torch, rubber-cased, throwing a good hard beam.' }, { if: 'torch_loaded', text: 'A police torch, loaded with fresh batteries. It is switched off.' }, { text: 'A rubber-cased police torch. You shake it: dead batteries rattle inside. Someone stole the good ones.' }]`
 - `light: { lit: false, fuel: 320, needs: 'torch_loaded', needsMsg: 'Click. Nothing. The batteries in it are as dead as Dickens.', outText: 'Your torch dies.' }` (fuel 320 >= 300, so `outText` never shows; L18)
 - `after: { turn_on: { award: 'torch_lit' } }`
-- `before` (one object, two slots):
+- `before` (one object, three slots):
   - `turn_on`: `{ if: [{ carried: 'batteries' }, '!torch_loaded'], say: '(First you load the fresh batteries.)', move: { batteries: null }, setFlag: 'torch_loaded', continue: true }` - TURN ON with the batteries in hand just works.
-  - `turn_off`: `{ if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'counting' }, '!dark_warned'], setFlag: 'dark_warned', style: 'alert', say: 'Switch off your only light, with Pike and his knife in here? He counts by touch. You do not. (Do it again if you really mean it.)' }` - consumes the turn (the counter still ticks); a second TURN OFF goes through.
+  - `turn_off`: `TORCH_OFF_WARNING`, with `IN_WITH_PIKE = [{ in: 'counting_room' }, { var: 'pikeState', eq: 'counting' }, { on: 'torch' }]`:
+    `[{ if: [...IN_WITH_PIKE, '!torch_off_warned'], setFlag: 'torch_off_warned', style: 'alert', say: 'Switch off your only light, with Pike and his knife in here? He counts by touch. You do not. (Do it again if you really mean it.)' }, { if: IN_WITH_PIKE, setFlag: 'dark_warned', continue: true }]`
+    - the first consumes the turn (the counter still ticks); a second TURN OFF goes through and, because
+    you were warned, sets `dark_warned`, so the attack counter kills on that turn (§8.4). The refusal's
+    own flag `torch_off_warned` never arms the counter for a later dark turn (TT-105).
+  - `examine` (by touch in the dark, TT-105; with the torch lit in hand the room is lit and the desc above answers): `[{ if: [{ lit: false }, '!torch_loaded'], say: 'By feel: the rubber case, the weight of it, the switch under your thumb. The dead batteries rattle when you shake it.' }, { if: { lit: false }, say: 'By feel: the rubber case, the weight of it, the switch under your thumb. It is switched off. TURN it ON.' }]`
 - No `put` slot and no `container`: item slots fire when the item is the direct *or* indirect object
   (A4.7), so a `put` slot here would also block PUT TORCH IN SUITCASE. PUT BATTERIES IN TORCH is
   handled by `batteries.before.put`; PUT COIN IN TORCH gets the engine's "can't put things in that".
@@ -1036,7 +1069,7 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 **`suitcase`** - desc: "A brown suitcase, labels from Blackpool and Benidorm. Frank's holiday case, for a working trip." · `openable: true, open: false` · `container: {}` · `fixed`: "It's Frank's. You'll look through it here."
 
 **`case_map`** - desc: "An Ordnance Survey map of Blackmere, marked in biro." · `readable`:
-`{ say: "Harrow's biro: the mill circled twice. Ashcombe Asylum, on the moor north of the tally stone, circled. At the canal lock: 'S. THORNE - saw something?' And by the Police House, a question mark, scribbled out.", note: 'case_map' }`
+`{ setFlag: 'heard_of_silas', say: "Harrow's biro: the mill circled twice. Ashcombe Asylum, on the moor north of the tally stone, circled. At the canal lock: 'S. THORNE - saw something?' And by the Police House, a question mark, scribbled out.", note: 'case_map' }` (`heard_of_silas`: the map names S. THORNE, so Maggie will sell the whisky - §7.1 "Maggie / map / visit", TT-105.)
 
 **`harrows_notes`** - desc: "A sheet of Frank's handwriting. You know it from a hundred reports." · `readable`:
 `{ say: 'ASHWORTH 18/10. CRABTREE 25/10. HOLT 1/11. MARSH 8/11. All Thursdays. All old mill names. Then, underlined twice: TALLY = DEBT. Who keeps the book? And smaller, at the bottom, in a different pen: Harrow.', note: 'harrow_list' }`
@@ -1081,6 +1114,8 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 **`crowbar`** - `initial`: "A crowbar leans in the corner, rusty but sound." · desc: "Three feet of iron, a claw at one end. The quarrymen's. It would lever open anything that rust has shut." · `before: { use: [{ if: { present: 'cabinet' }, then: PRY_CABINET }, { if: { present: 'drawer_four' }, then: MOVE_DRAWER }, { if: { present: 'iron_trap' }, then: TRAP }, 'Nothing here wants levering.'] }`
 
 **`rope`** - `initial`: "A long coil of rope hangs from a nail." · desc: "Sixty feet of hemp, stiff with cold but sound. Enough to get down a quarry face, with something to tie it to."
+- `before: { tie: TIE_ROPE, use: TIE_ROPE }` (TT-105: the winch post says "You could tie a rope to that", so at the edge, rope in hand, TIE ROPE (TO POST) / USE ROPE is the climb down - the same as DOWN; `quarry_floor.onEnter` tells it the first time):
+  `TIE_ROPE = [{ if: [{ in: 'quarry_edge' }, { carried: 'rope' }, 'climbed_down'], say: 'You loop the rope round the winch post again and go down it hand over hand.', movePlayer: 'quarry_floor' }, { if: [{ in: 'quarry_edge' }, { carried: 'rope' }], movePlayer: 'quarry_floor' }, { if: { in: 'quarry_edge' }, say: "You'll want to be holding it first." }, "There's nothing here worth tying it to."]`
 
 **`exercise_book`** - `initial`: "A child's exercise book lies swollen beside the fire ring." · desc: "A school exercise book, swollen with rain and dried out and swollen again. On the cover in careful capitals: A.P. FORM 2." · `readable`: "Page after page of tally marks, gates of five, row on row - and then, halfway through, only fours. Four, four, four, never the fifth stroke, as if the hand refused it. On the last page, in a boy's capitals: WHEN THE TALLY IS SETTLED SHE CAN STOP."
 
@@ -1356,7 +1391,7 @@ accusation.
 | 5 | `torch_loaded` | TURN ON TORCH, TURN TORCH ON, SWITCH ON TORCH, LIGHT TORCH | torch lit, +5 `torch_lit` |
 | 6 | `room_key` carried, `black_lamb` | U, GO UP, UP, CLIMB UP, CLIMB STAIRS | enter `harrows_room`, +5 `harrows_room` |
 | 7 | `harrows_room` | OPEN SUITCASE / BAG; READ MAP; READ NOTES / LIST; EXAMINE JACKET | notes `case_map`, `harrow_list`; cuffs pointer |
-| 8 | anywhere Maggie or the cottage | ASK MAGGIE ABOUT SILAS / LOCK KEEPER / COUNTING MAN; or enter `lock_cottage` | flag `heard_of_silas` |
+| 8 | anywhere Maggie or the cottage, or `case_map` | ASK MAGGIE ABOUT SILAS / LOCK KEEPER / COUNTING MAN; or enter `lock_cottage`; or READ MAP | flag `heard_of_silas` |
 | 9 | `black_lamb`, `heard_of_silas`, money >= 200 | BUY WHISKY, BUY WHISKY FROM MAGGIE, ORDER WHISKY, PURCHASE BOTTLE | `whisky` carried, money -200 |
 | 10 | `lock_cottage`, `whisky` carried | GIVE WHISKY TO SILAS, GIVE SILAS WHISKY, OFFER WHISKY TO SILAS, HAND BOTTLE TO OLD MAN | `SILAS_STORY`: flags `silas_told`, `shed_open`, +5 `silas_story`, note `silas_story` |
 | 11 | `shed` (needs `shed_open`) | TAKE CUTTERS / BOLT CUTTERS / CROPPERS, TAKE OIL CAN, TAKE ALL | `bolt_cutters`, `oil_can` |
@@ -1447,6 +1482,9 @@ verbs: [
     default: 'Replace it with what?' },
   { id: 'pour', words: ['pour', 'squirt', 'drip'], patterns: ['pour {dobj}', 'pour {dobj} on|onto|over|into|in {iobj}'],
     default: "You'd only waste it." },
+  { id: 'tie', words: ['tie', 'fasten', 'knot', 'lash', 'attach'],
+    patterns: ['tie {dobj}', 'tie {dobj} to|on|onto|round|around {iobj}', 'tie up {dobj}', 'tie {dobj} up'],
+    default: "You've nothing that needs tying." },                     // TT-105; rope.before.tie (§5.2)
   { id: 'pray', words: ['pray'], patterns: ['pray'], default: 'You pray. The rain goes on.' },
   { id: 'knock', words: ['knock', 'bang', 'rap'], patterns: ['knock', 'knock on {dobj}', 'knock at {dobj}'],
     default: 'Nobody answers.' },
@@ -1487,9 +1525,9 @@ evidence: {
 
 **Flags** (all set somewhere; L22): `maggie_saw_card`, `got_batteries`, `torch_loaded`, `heard_of_silas`,
 `entered_harrows_room`, `phoned`, `alibi_known`, `letters_found`, `silas_told`, `shed_open`, `found_car`,
-`climbed_down`, `dark_warned`, `mill_chain_cut`, `entered_mill`, `saw_girl`, `heard_praying`, `heard_harrow`, `hatch_oiled`,
-`ward_counting`, `morgue_hatch_found`, `tunnel_music`, `pike_greeted`, `accused_maggie`, `accused_ashdown`,
-`accused_silas`.
+`climbed_down`, `torch_off_warned`, `dark_warned`, `mill_chain_cut`, `entered_mill`, `saw_girl`, `heard_praying`, `heard_harrow`, `hatch_oiled`,
+`ward_counting`, `morgue_hatch_found`, `tunnel_music`, `pike_greeted`, `pike_fled`, `accused_maggie`, `accused_ashdown`,
+`accused_silas`. (`torch_off_warned`: the TURN OFF refusal, §5.2; `pike_fled`: the ACCUSE that makes him run, §8.1 - TT-105.)
 
 **Vars** (A3.2/A14.3, exactly): `pikeState`, `pikeArrivalTurn`, `attack`, `harrowFreed`. No extra vars.
 
@@ -1504,7 +1542,7 @@ case: {
   confirm: 'Are you certain? (Y/N)',
   cancelText: '(You hold your tongue.)',
   correct: [
-    { if: { in: 'police_house' }, sfx: 'sting', award: 'accusation', move: { pike: null },
+    { if: { in: 'police_house' }, sfx: 'sting', award: 'accusation', move: { pike: null }, setFlag: 'pike_fled',
       setVar: { pikeState: 'fled', pikeArrivalTurn: { turnPlus: 5 } },
       say: '"Arthur Pike, I am arresting you for the murders of Edna Ashworth, Walter Crabtree, Dennis Holt and Ivy Marsh -" He stands. He is very big. For a moment his face is quite empty, a slate wiped clean. Then he puts both hands on the counter and vaults it, and his shoulder takes you into the wall. By the time you are up, the door is banging in the wind and he is gone into the rain without his helmet. You know where. Under the mill. To Frank.' },
     { award: 'accusation',
@@ -1569,10 +1607,12 @@ onEnter: [
   { if: [{ var: 'pikeState', eq: 'counting' }, '!pike_greeted'], setFlag: 'pike_greeted', sfx: 'sting', style: 'alert',
     say: 'Pike turns from the wall. He has taken off his tunic and folded it on the wages table, and he holds a long butcher\'s knife low against his leg. "You\'re early, Sergeant," he says. "I\'ve one more to count."',
     then: BLEED_CUE },
+  { if: [{ var: 'pikeState', eq: 'counting' }, { lit: false }], style: 'alert', say: 'Somewhere ahead of you in the black a big man is breathing, slow and even, close enough to touch.' },
   { if: { var: 'pikeState', eq: 'counting' }, style: 'alert', say: 'Pike is waiting for you, knife low. He has started counting again.', then: BLEED_CUE },
   BLEED_CUE,
 ],
 ```
+(The dark line: felt your way back in with the torch off, A8.3 step 4 - you cannot see him, TT-105.)
 **Attack counter** (`daemons`, step D4, A14.3 - order `pike_arrives` then `attack`):
 ```js
 daemons: [
@@ -1600,12 +1640,14 @@ daemons: [
       ] } },
 ],
 ```
-Warnings before death (fairness): lit - 2 ("He circles, knife low"), 3, 4 (lunge); dark - 1, plus
-the TURN OFF TORCH warning (`dark_warned`). The dark branch is fatal only once `dark_warned` is
-set (PLAN "dark: warning at 1, fatal at 2"): switching the torch off in here gives the TURN OFF
+Warnings before death (fairness): lit - 2 ("He circles, knife low"), 3, 4 (lunge); dark - 1, or
+the TURN OFF TORCH refusal followed by a deliberate second TURN OFF. The dark branch is fatal only
+once `dark_warned` is set (PLAN "dark: warning at 1, fatal at 2"), and only two things set it: the
+"One..." warning itself, and the second TURN OFF in here after the refusal (§5.2 `TORCH_OFF_WARNING`;
+the refusal alone only sets `torch_off_warned`). So switching the torch off in here is refused with a
 warning first, and any other dark turn in here - e.g. walking back in by the darkness rule's way
-back (§3.3 msg F note) with the torch off - gives the "One..." warning and sets `dark_warned`, so
-the next dark turn is fatal (TT-121). Through the tunnel's `n` exit the room can only be entered
+back (§3.3 msg F note) with the torch off, even after an earlier refusal - gives the "One..." warning
+and sets `dark_warned`, so the next dark turn is fatal (TT-121, TT-105). Through the tunnel's `n` exit the room can only be entered
 with a light in hand. The counter persists when the player leaves and
 resumes on re-entry (+1 on the entering turn). Nerve: Beneath caps at 99, never panics (§3.1).
 
@@ -2061,7 +2103,7 @@ happens Beneath. (Softlocks found by TT-022 and fixed in TT-120..123 are listed 
 | Maggie / Silas cooperation | items | They never move, never refuse forever, and every gate is a flag that stays set. |
 | Pike's arrival | iron door | Either ACCUSE (>= 3 evidence) -> arrives 5 turns later, or automatic at turn 250. A weak or wrong-suspect accusation never blocks him (wrong -> ending, weak -> retry). |
 | Counting Room | finale | Re-entry is always possible; the counter pauses outside. Cuffs and cutters can be fetched in either order. |
-| Dark Counting Room | - | Through the tunnel door only with a lit torch in hand (msg F). Dark inside only after a warning: switching off inside is warned first (`dark_warned`); feeling your way back in by the darkness rule with the torch off gives the "One..." warning first (§8.4). |
+| Dark Counting Room | - | Through the tunnel door only with a lit torch in hand (msg F). Dark inside only after a warning: switching off inside is refused with a warning first (`torch_off_warned`), and only the second, deliberate TURN OFF arms the counter (`dark_warned`); feeling your way back in by the darkness rule with the torch off always gives the "One..." warning first, whatever was refused earlier (§8.4, TT-105). |
 | Lock / quarry hazards | - | Warned once (1 turn); the warning text says what will happen. Bare ENTER at the lock is the hazard (no `in` exit there; the warning points north to the cottage). |
 | Clock | - | Reference win at turn 91 (boiler route 102). The latest feasible win: Pike arrives at 250 even if never accused, leaving 50 turns for the tunnel and finale. |
 | UNDO after death | - | Restores the line before; hazard warnings stay given (state.warned), matching "warned once". |

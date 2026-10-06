@@ -20,9 +20,22 @@ export const rules = {
   nerve: {
     start: 10,
     panicText: 'Your nerve goes. You run.',
+    // Beneath has no lamps to run to and never panics, so it gets its own lines (TT-105).
     messages: [
-      { at: 50, text: 'Your hands will not stop shaking. Find some light, somewhere warm.' },
-      { at: 75, text: 'Every shadow has a shape now. Get back to the lamps.' },
+      {
+        at: 50,
+        text: [
+          { if: { zone: 'beneath' }, text: 'Your hands will not stop shaking. The torch beam shakes with them. Breathe.' },
+          { text: 'Your hands will not stop shaking. Find some light, somewhere warm.' },
+        ],
+      },
+      {
+        at: 75,
+        text: [
+          { if: { zone: 'beneath' }, text: 'Every shadow down here has a shape now. Think of Frank. Keep going.' },
+          { text: 'Every shadow has a shape now. Get back to the lamps.' },
+        ],
+      },
       { at: 90, text: 'You can hear your own heart. Something is about to give.' },
     ],
   },

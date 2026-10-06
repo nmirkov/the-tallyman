@@ -91,7 +91,7 @@ export const rooms = {
     desc: 'A red phone box, glass fogged, smelling of fag ends. The directory has been torn out page by page. A card above the phone says MINIMUM CALL 10p, and someone has scratched four strokes into the paint beside it. The square is out.',
     exits: { out: 'market_square' },
     scenery: [
-      { names: ['directory', 'book', 'pages'], desc: 'Just the spine and the letters A to C. Someone wanted the rest.' },
+      { names: ['directory', 'book', 'pages', 'page'], desc: 'Just the spine and the letters A to C. Someone wanted the rest.' },
       { names: ['card', 'notice'], desc: 'MINIMUM CALL 10p. FOR EMERGENCIES DIAL 999. In biro underneath: DONT.' },
       { names: ['strokes', 'scratches', 'marks', 'paint'], desc: "Four strokes. Neat, deliberate, about the height of a big man's eyes." },
       { names: ['glass'], desc: 'Fogged with your own breath. You wipe a hole. The square, the cross, the rain.' },
@@ -125,6 +125,7 @@ export const rooms = {
       { names: ['bedspread', 'bed', 'candlewick'], desc: "Pink candlewick. He hasn't slept in it. He hasn't even sat on it." },
       { names: ['gas ring', 'ring'], desc: 'A kettle on it, cold.' },
       { names: ['window'], desc: 'Rain, and beyond it the dark lump of the moor.' },
+      { names: ['stair', 'stairs'], desc: 'Down to the bar. The carpet is worn through on every tread.' },
       { names: ['jacket', 'coat'], desc: 'His sports jacket, elbow patches. On the belt hanging with it, an empty handcuff pouch. He took his cuffs with him.' },
       { names: ['pouch', 'handcuff pouch', 'belt'], desc: 'Black leather, police issue, empty. Wherever Frank went, his handcuffs went too.' },
       { names: ['chair'], desc: 'A hard chair. His jacket on it.' },
@@ -136,7 +137,8 @@ export const rooms = {
   police_house: {
     name: 'Police House', zone: 'town', picture: 'police_house', ambient: 'none',
     desc: [
-      { if: { var: 'pikeState', eq: 'fled' }, text: "The front office of the Police House. The counter flap is up, the occurrence book open on the desk, and Pike's helmet lies on the floor where it fell. The clock ticks for nobody. The cells are east. The square is west." },
+      // `pike_fled` (set by the ACCUSE that makes him run) outlasts `fled`: the helmet stays on the floor (TT-105).
+      { if: 'pike_fled', text: "The front office of the Police House. The counter flap is up, the occurrence book open on the desk, and Pike's helmet lies on the floor where it fell. The clock ticks for nobody. The cells are east. The square is west." },
       { if: { var: 'pikeState', oneOf: ['left', 'counting', 'restrained'] }, text: "The front office of the Police House. Empty. The kettle is still warm and the occurrence book lies open on the desk. Pike's cape is gone from its peg. The clock ticks. The cells are east. The square is west." },
       { text: 'The front office of the Police House: a counter, a kettle, a wall clock that ticks too loudly, a desk with the occurrence book open on it. Wanted posters curl on a board. The cells are east. The square is west.' },
     ],
@@ -150,22 +152,46 @@ export const rooms = {
       {
         names: ['helmet'],
         desc: [
-          { if: { var: 'pikeState', eq: 'fled' }, text: "Pike's helmet, upturned. He went out without it, in a hurry." },
+          { if: 'pike_fled', text: "Pike's helmet, upturned. He went out without it, in a hurry." },
           { text: 'On its peg, polished.' },
         ],
       },
-      { names: ['peg', 'pegs', 'cape'], desc: "A row of pegs by the door. Pike's cape hangs there - a long police cape, the old kind." },
+      {
+        names: ['peg', 'pegs', 'cape'],
+        desc: [
+          { if: { var: 'pikeState', eq: 'desk' }, text: "A row of pegs by the door. Pike's cape hangs there - a long police cape, the old kind." },
+          { text: "A row of pegs by the door. Pike's peg is empty: his cape has gone out into the rain with him." },
+        ],
+      },
+      {
+        names: ['floor', 'lino'],
+        desc: [
+          { if: 'pike_fled', text: "Brown lino, worn pale in front of the counter. Pike's helmet lies upturned where it fell." },
+          { text: 'Brown lino, worn pale in front of the counter.' },
+        ],
+      },
     ],
   },
 
   cells: {
     name: 'Cells', zone: 'town', picture: 'cells', ambient: 'none',
-    desc: 'Two cells, doors open, a bucket in each. A black police bicycle leans in the corridor. Someone has scratched four strokes low on the wall of the far cell, very neat. The front office is west.',
+    // Pike rides off when he flees or leaves (Silas's bike lamp; the got-away ending) (TT-105).
+    desc: [
+      { if: { var: 'pikeState', ne: 'desk' }, text: "Two cells, doors open, a bucket in each. The corridor is empty: Pike's bicycle has gone, leaving moor mud on the tiles. Someone has scratched four strokes low on the wall of the far cell, very neat. The front office is west." },
+      { text: 'Two cells, doors open, a bucket in each. A black police bicycle leans in the corridor. Someone has scratched four strokes low on the wall of the far cell, very neat. The front office is west.' },
+    ],
     exits: { w: 'police_house' },
     scenery: [
       { names: ['cells', 'cell', 'doors'], desc: "Empty. Blackmere doesn't lock many people up. It prefers to talk about them." },
       { names: ['bucket', 'buckets'], desc: 'Galvanised. Clean. Pike runs a tidy station.' },
-      { names: ['bicycle', 'bike'], adjectives: ['police', 'black'], desc: "Pike's bicycle, upright and heavy. Fresh moor mud caked in the tyres, and black coal dust ground into the chain." },
+      {
+        names: ['bicycle', 'bike', 'mud'], adjectives: ['police', 'black', 'moor'],
+        desc: [
+          { if: { var: 'pikeState', ne: 'desk' }, text: 'Gone. A smear of moor mud on the tiles where it leaned.' },
+          { text: "Pike's bicycle, upright and heavy. Fresh moor mud caked in the tyres, and black coal dust ground into the chain." },
+        ],
+      },
+      { names: ['corridor', 'tiles'], desc: 'Brown tiles and green gloss paint, smelling of Jeyes Fluid. Pike mops it himself.' },
       { names: ['strokes', 'marks', 'scratches', 'wall'], desc: 'Four strokes, scratched with something sharp, by someone kneeling. Prisoners do it to count days. Nobody has been held here in a month.' },
     ],
   },
@@ -237,7 +263,7 @@ export const rooms = {
     desc: "St Jude's: cold stone, candle smoke and damp hymn books. Fourteen small brass plaques line the north wall. The vestry is east; the porch north opens on the churchyard. Steps lead down to the crypt. The lane is south.",
     exits: { n: 'churchyard', e: 'vestry', s: 'church_lane', d: 'crypt', out: 'church_lane' },
     scenery: [
-      { names: ['plaques', 'plaque', 'brass'], desc: 'Fourteen small brass plaques, each engraved with the same date and nothing else: 15 NOVEMBER 1912. No names. The vicar will tell you the names are in the register.' },
+      { names: ['plaques', 'plaque', 'brass', 'wall'], desc: 'Fourteen small brass plaques, each engraved with the same date and nothing else: 15 NOVEMBER 1912. No names. The vicar will tell you the names are in the register.' },
       { names: ['pews', 'pew'], desc: 'Box pews, the doors worn smooth by a century of hands.' },
       { names: ['candles', 'candle'], desc: 'A rack of votive candles. Four are burning. You count them without meaning to.' },
       { names: ['hymn books', 'books'], desc: 'Ancient and Modern, swollen with damp.' },
@@ -268,7 +294,7 @@ export const rooms = {
     scenery: [
       { names: ['grass'], desc: 'Long, wet, grabbing at your trousers.' },
       { names: ['headstones', 'graves', 'stones'], desc: 'Ashworth. Crabtree. Holt. The old town names, over and over. And Marsh, freshly dug, flowers still in their cellophane.' },
-      { names: ['girl', 'statue', 'stone girl'], desc: "Carved in clogs and shawl, hands folded. The rain has taken her face. You find you don't like turning your back on her." },
+      { names: ['girl', 'statue', 'stone girl', 'face'], desc: "Carved in clogs and shawl, hands folded. The rain has taken her face. You find you don't like turning your back on her." },
       { names: ['gap', 'wall'], desc: 'Leads to the ginnel behind Chapel Street.' },
     ],
   },
@@ -281,6 +307,8 @@ export const rooms = {
       { names: ['shelves', 'coffins', 'coffin'], desc: 'Lead coffins on stone shelves, labels long gone. Nothing has moved here for a century except the vicar.' },
       { names: ['chairs'], desc: 'Stacked, broken. Harvest festival 1953, by the look of the bunting.' },
       { names: ['dust'], desc: 'Thick everywhere - except a trail from the steps to that one stone.' },
+      { names: ['wall', 'walls'], desc: 'Rough stone, sweating. One stone sits proud of the rest.' },
+      { names: ['steps'], desc: 'Up to the church, and the candles.' },
     ],
   },
 };
@@ -289,11 +317,20 @@ export const rooms = {
  *  Items (content order is set by ITEM_ORDER in ../index.js, STORY §5.1)    *
  * ------------------------------------------------------------------------ */
 
-/** TURN OFF in the Counting Room while Pike counts: warned once (STORY §5.2). */
-const TORCH_OFF_WARNING = {
-  if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'counting' }, '!dark_warned'], setFlag: 'dark_warned', style: 'alert',
-  say: 'Switch off your only light, with Pike and his knife in here? He counts by touch. You do not. (Do it again if you really mean it.)',
-};
+/**
+ * TURN OFF in the Counting Room while Pike counts (STORY §5.2, §8.4): refused once with a
+ * warning (`torch_off_warned`); a second TURN OFF goes through, and because you were warned it
+ * sets `dark_warned`, so the attack counter kills on that turn. The refusal's own flag never
+ * arms the counter elsewhere (TT-105: retracing into the dark room still gets "One...").
+ */
+const IN_WITH_PIKE = [{ in: 'counting_room' }, { var: 'pikeState', eq: 'counting' }, { on: 'torch' }];
+const TORCH_OFF_WARNING = [
+  {
+    if: [...IN_WITH_PIKE, '!torch_off_warned'], setFlag: 'torch_off_warned', style: 'alert',
+    say: 'Switch off your only light, with Pike and his knife in here? He counts by touch. You do not. (Do it again if you really mean it.)',
+  },
+  { if: IN_WITH_PIKE, setFlag: 'dark_warned', continue: true },
+];
 
 export const items = {
   warrant_card: {
@@ -319,6 +356,11 @@ export const items = {
       turn_on: { if: [{ carried: 'batteries' }, '!torch_loaded'], say: '(First you load the fresh batteries.)', move: { batteries: null }, setFlag: 'torch_loaded', continue: true },
       // The warning names the Counting Room, so it switches on with TT-018's rooms.
       turn_off: TORCH_OFF_WARNING,
+      // In the dark the carried torch is found by touch (TT-105); a lit torch in hand lights the room.
+      examine: [
+        { if: [{ lit: false }, '!torch_loaded'], say: 'By feel: the rubber case, the weight of it, the switch under your thumb. The dead batteries rattle when you shake it.' },
+        { if: { lit: false }, say: 'By feel: the rubber case, the weight of it, the switch under your thumb. It is switched off. TURN it ON.' },
+      ],
     },
   },
   bench: {
@@ -376,6 +418,7 @@ export const items = {
     name: 'map', names: ['map', 'case map'], adjectives: ['ordnance', 'survey', 'harrow'], location: 'suitcase',
     desc: 'An Ordnance Survey map of Blackmere, marked in biro.',
     readable: {
+      setFlag: 'heard_of_silas',
       say: "Harrow's biro: the mill circled twice. Ashcombe Asylum, on the moor north of the tally stone, circled. At the canal lock: 'S. THORNE - saw something?' And by the Police House, a question mark, scribbled out.",
       note: 'case_map',
     },
@@ -418,7 +461,7 @@ export const items = {
     readable: "THE TALLYMAN STRIKES FOURTH TIME. Retired teacher Ivy Marsh (66) found dead at home, No.13 Chapel Street. Like Edna Ashworth, Walter Crabtree and Dennis Holt before her, four strokes scratched beside the body. Police 'following several lines of inquiry'. PC Arthur Pike: 'Lock your doors on a Thursday.' Inside: MILL TO BE PULLED DOWN.",
   },
   register: {
-    name: 'burial register', names: ['register', 'burial register', 'parish register'], adjectives: ['burial', 'parish'],
+    name: 'burial register', names: ['register', 'burial register', 'parish register', 'pages'], adjectives: ['burial', 'parish'],
     location: 'vestry', scenery: true, fixed: 'It\'s chained to the desk, and it weighs as much as a font.',
     desc: "The burial register of St Jude's, 1890 to 1950. Foxed pages, copperplate, a lot of children. You could READ it.",
     readable: READ_REGISTER,

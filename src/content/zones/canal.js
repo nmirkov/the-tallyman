@@ -47,6 +47,7 @@ export const rooms = {
       { names: ['flowers', 'cellophane'], desc: 'Chrysanthemums, brown now. The card says: WALTER - FROM THE LADS AT THE BOWLING CLUB.' },
       { names: ['mill'], desc: "Ashworth's Mill. Seven storeys of black. A chimney like a finger raised for silence." },
       { names: ['water', 'canal'], desc: 'Black and quiet. You keep to the middle of the path.' },
+      { names: ['steps'], desc: 'Worn stone, up to the bridge.' },
     ],
     before: {
       swim: "Into November canal water? There are easier ways to catch your death, and you're trying to avoid them all tonight.",
@@ -79,7 +80,8 @@ export const rooms = {
       { names: ['rocking chair', 'chair'], desc: "Silas's chair. It rocks on its own a moment after he stops." },
       { names: ['whippet', 'dog', 'nell'], desc: 'Grey, thin, asleep - or pretending. Her ears follow you. She never barks.' },
       { names: ['coat'], desc: "An army greatcoat, very old. The dog's now." },
-      { names: ['clocks', 'clock', 'shelves'], desc: "Dozens of clocks, all stopped, all at different times. 'Can't abide the ticking,' says Silas. 'Sounds like counting.'" },
+      { names: ['door'], desc: 'A plank door, out to the lock. The roar of the water comes through it anyway.' },
+      { names: ['clocks', 'clock', 'shelves', 'shelf'], desc: "Dozens of clocks, all stopped, all at different times. 'Can't abide the ticking,' says Silas. 'Sounds like counting.'" },
     ],
     // Silent: meeting Silas counts as having heard of him, so Maggie will sell whisky.
     onEnter: { setFlag: 'heard_of_silas' },

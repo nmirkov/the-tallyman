@@ -2,7 +2,7 @@
 id: TT-105
 title: Address R3 content review notes
 milestone: BUG
-status: in-progress
+status: done
 agent: writer
 model: opus
 depends: [TT-120]

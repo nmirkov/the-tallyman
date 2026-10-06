@@ -18,6 +18,13 @@ export const verbs = [
     id: 'pour', words: ['pour', 'squirt', 'drip'], patterns: ['<word> {dobj}', '<word> {dobj} on|onto|over|into|in {iobj}'],
     default: "You'd only waste it.",
   },
+  // Not in STORY §7.4 before TT-105: the winch post invites it ("You could tie a rope to that").
+  // TIE ROPE (TO POST) at the quarry edge is the climb down (rope.before.tie, STORY §5.2).
+  {
+    id: 'tie', words: ['tie', 'fasten', 'knot', 'lash', 'attach'],
+    patterns: ['<word> {dobj}', '<word> {dobj} to|on|onto|round|around {iobj}', '<word> up {dobj}', '<word> {dobj} up'],
+    default: "You've nothing that needs tying.",
+  },
   { id: 'pray', words: ['pray'], patterns: ['<word>'], default: 'You pray. The rain goes on.' },
   {
     id: 'knock', words: ['knock', 'bang', 'rap'], patterns: ['<word>', '<word> on {dobj}', '<word> at {dobj}'],
