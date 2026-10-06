@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<title>Terminal Test</title>
+<!--
+  TT-011 dev page (serve with `npm start`, open /tools/terminal-test.html).
+  Type commands; the page answers with sample Output Event batches. HELP lists them.
+  Query params:
+    theme      = c64 (default) | spectrum | amber
+    graphics   = off            start with the picture panel hidden (text rows 1-24)
+    typewriter = off            instant text
+    rate       = <chars/s>      typewriter speed (default 400)
+    static=1                    reduced motion: instant text, no blinking (deterministic screenshots)
+    script     = cmd1|cmd2|...  auto-type commands (each waits until the terminal is idle)
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  #stage { position: fixed; left: 0; top: 0; width: 100%; height: 100%; }
+  #stage canvas { position: absolute; inset: 0; display: block; image-rendering: pixelated; touch-action: manipulation; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas aria-label="Character screen. Type commands; the transcript follows."></canvas></div>
+<script type="module">
+import { createScreen } from '../src/ui/screen.js';
+import { createTerminal } from '../src/ui/terminal.js';
+
+const params = new URLSearchParams(location.search);
+const COLS = 40;
+const stat = params.get('static') === '1';
+let graphics = params.get('graphics') !== 'off';
+
+const screen = createScreen(document.querySelector('#stage canvas'), { theme: params.get('theme') || 'c64' });
+
+function statusBar(left, right) {
+  const pad = COLS - 2 - left.length - right.length;
+  screen.print(0, 0, ` ${left}${' '.repeat(Math.max(1, pad))}${right} `, 'statusFg', 'statusBg');
+}
+
+// A small fixed PETSCII-ish scene for rows 1-9 so the page shows the real layout.
+function drawPicture() {
+  const top = 1;
+  const P = (x, y, ch, fg, bg = '0') => screen.put(x, top + y, ch, fg, bg);
+  screen.fill({ x: 0, y: top, w: COLS, h: 9 }, ' ', '1', '0');
+  const stars = [[2, 0], [9, 1], [15, 0], [23, 2], [28, 0], [37, 1], [12, 2], [33, 2]];
+  stars.forEach(([x, y], i) => P(x, y, i % 3 ? '.' : '*', i % 2 ? 'f' : 'c'));
+  screen.print(31, top + 1, '▗██▖', '7', '0');
+  screen.print(31, top + 2, '▝██▘', '7', '0');
+  screen.fill({ x: 4, y: top + 3, w: 13, h: 5 }, '█', 'b', '0');
+  screen.fill({ x: 5, y: top + 2, w: 11, h: 1 }, '▄', 'b', '0');
+  for (const x of [6, 9, 12, 15]) { P(x, 4, '▄', '7', 'b'); P(x, 6, '▀', '7', 'b'); }
+  P(10, 7, '▐', '9', 'b'); P(11, 7, '▌', '9', 'b');
+  screen.fill({ x: 19, y: top, w: 2, h: 8 }, '█', 'c', '0');
+  P(26, 3, '▀', '7'); for (let y = 4; y < 8; y++) P(26, y, '│', 'c');
+  screen.fill({ x: 22, y: top + 7, w: 18, h: 1 }, '█', '6', '0');
+  screen.fill({ x: 0, y: top + 8, w: COLS, h: 1 }, '▓', '9', '0');
+  screen.fill({ x: 0, y: 10, w: COLS, h: 1 }, '─', 'divider');
+}
+
+function chrome() {
+  statusBar('TERMINAL TEST', `${screen.theme.name.toUpperCase()}  ${graphics ? 'GFX' : 'TXT'}`);
+  if (graphics) drawPicture();
+}
+
+const term = createTerminal(screen, {
+  graphics,
+  typewriter: params.get('typewriter') !== 'off',
+  rate: Number(params.get('rate')) || undefined,
+  reducedMotion: stat || undefined,
+  onSubmit: respond,
+  onKey: (kind) => { keyLog.push(kind); },
+});
+const keyLog = [];
+
+const LONG = [
+  'The Tallyman came to Lowbridge in the wet October of 1891, when the mill ran three shifts and still could not keep pace with the orders from Manchester.',
+  'Nobody saw him arrive. He was simply there one morning at the end of Gas Street, a tall man in a coat the colour of canal water, with a ledger under one arm and a bundle of hazel sticks under the other.',
+  'He lent to anyone. A shilling here, half a crown there, never more than a family could hope to pay back by Friday. For every coin he cut a notch in a stick, split it down the middle, and kept one half.',
+  'By Christmas there was not a house on the terraces without a half-stick hidden behind the clock. By Candlemas the first of the debtors had stopped coming to the mill.',
+  'Their neighbours said they had gone to Bradford, or to sea, or to the workhouse at Skelmanthorpe. Their tally sticks said otherwise: every one of them had been paid in full, the notches planed smooth as if they had never been cut.',
+  'You have one of those sticks now. Forty notches. One of them is fresh.',
+];
+
+const say = (text, style) => term.print(text, style);
+
+function room() {
+  say('Mill Yard', 'title');
+  say('Rain needles the cobbles. The old mill looms to the west, its windows lit by a light that should not be there. A tally stick lies by the gate, worth £2 to someone.');
+  say('Exits: north, west.');
+}
+
+function respond(line) {
+  const words = line.trim().toLowerCase().split(/\s+/);
+  const [cmd, arg] = words;
+  switch (cmd) {
+    case undefined: case '':
+      say('Beg your pardon?', 'system'); break;
+    case 'help':
+      say('Commands: LOOK, LONG (triggers [MORE]), STYLES, WRAP, PAUSE, CLEAR, GRAPHICS ON|OFF, TYPEWRITER ON|OFF, THEME C64|SPECTRUM|AMBER, HELP. Anything else is echoed back. Keys: Up/Down history, PgUp/PgDn scrollback, Left/Right/Home/End/Del edit.', 'system');
+      break;
+    case 'look': case 'l': room(); break;
+    case 'long': LONG.forEach((p) => say(p)); break;
+    case 'styles':
+      say('A title line', 'title');
+      say('Normal text, the bulk of the game.');
+      say('...nineteen... twenty...', 'whisper');
+      say('Your nerve is failing!', 'alert');
+      say('[System: saved in slot 1.]', 'system');
+      break;
+    case 'wrap':
+      say('x'.repeat(40));
+      say(`${'a'.repeat(39)} b`);
+      say(`Supercalifragilistic${'expialidocious'.repeat(4)} done.`);
+      say('Multiple   spaces   kept;   trailing   dropped.      ');
+      say('Price: £2.00 exactly.\n\nAfter a blank line.');
+      break;
+    case 'pause':
+      say('The lamp gutters...');
+      term.pause(1500);
+      say('...and goes out.', 'alert');
+      break;
+    case 'clear': term.clear(); term.mark(() => say('Cleared.', 'system')); break;
+    case 'graphics': {
+      const on = arg ? arg === 'on' : !graphics;
+      term.mark(() => { graphics = on; term.setGraphics(on); chrome(); });
+      say(`Graphics ${on ? 'on' : 'off'}.`, 'system');
+      break;
+    }
+    case 'typewriter': {
+      const on = arg !== 'off';
+      term.setTypewriter(on);
+      say(`Typewriter ${on ? 'on' : 'off'}.`, 'system');
+      break;
+    }
+    case 'theme': {
+      const t = ['c64', 'spectrum', 'amber'].includes(arg) ? arg : 'c64';
+      screen.setTheme(t);
+      chrome();
+      say(`Theme: ${screen.theme.label}.`, 'system');
+      break;
+    }
+    default:
+      say(`You typed: ${line}`);
+  }
+}
+
+chrome();
+say('THE TALLYMAN - terminal test', 'title');
+say('Type HELP for commands. Any key skips the typewriter; any key continues at [MORE].', 'system');
+say('');
+LONG.forEach((p) => say(p));
+
+// ?script=cmd1|cmd2 types each command once the terminal is idle (pressing a key at each
+// [MORE]); output after the last command is left as it lands, so a final [MORE] stays up.
+const script = (params.get('script') || '').split('|').filter(Boolean);
+async function runScript() {
+  for (const cmd of script) {
+    while (!term.ready) {
+      if (term.core.more) term.core.key(' ');
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    for (const ch of cmd) term.core.key(ch);
+    term.core.key('Enter');
+    await new Promise((r) => setTimeout(r, 30));
+  }
+}
+if (script.length) runScript();
+term.focus();
+
+window.__term = term;
+window.__screen = screen;
+window.__keyLog = keyLog;
+window.__rowText = (y) => Array.from({ length: COLS }, (_, x) => screen.get(x, y).ch).join('');
+</script>
+</body>
+</html>

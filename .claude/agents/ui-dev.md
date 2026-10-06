@@ -21,3 +21,4 @@ Rules specific to you:
 - No new runtime dependencies. Dev dependencies only if the ticket allows it.
 - Code style: ES2022 modules, 2-space indent, single quotes, semicolons, small pure functions, JSDoc on exported functions, comments only where the why is non-obvious.
 - Your final message to the orchestrator: <= 200 words — status (DONE / PARTIAL / BLOCKED), what changed, test results, anything the orchestrator must know. No file dumps.
+- Servers: pick a free port ≠ 8064, record its PID, stop it by that PID only. Never `pkill -f` a pattern — other agents may run similar processes.

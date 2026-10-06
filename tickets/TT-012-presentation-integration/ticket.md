@@ -2,7 +2,7 @@
 id: TT-012
 title: Presentation integration: status bar, picture panel, themes, engine wiring, storage adapter
 milestone: M2
-status: todo
+status: in-progress
 agent: ui-dev
 model: opus
 depends: [TT-011, TT-013]
@@ -28,3 +28,7 @@ Wire engine ↔ UI into the playable browser game (PLAN §3.6–3.8; ARCHITECTUR
 - [ ] `npm run build` → `dist/tallyman.html` playable via `file://` (screenshot with `?script=w|search bench|take torch|e|n|n|w`), C64 and Spectrum themes, 1800 px and 390 px; viewed and described.
 - [ ] Zero console errors during a scripted session (capture via CDP).
 - [ ] `npm run check` green.
+
+## Orchestrator notes
+- Read `tickets/TT-011-terminal-interaction/implementation.md` (terminal API; wrap sfx/picture/status/room events in `term.mark(fn)` so they fire in order after the typed text), `tickets/TT-013-audio/implementation.md` (facade, `sfxLoop`, unlock), `tickets/TT-019-art-style-gate/implementation.md` (`src/ui/fx.js`), `tickets/TT-021-art-screens/implementation.md` (reserved rows on ending screens).
+- `src/content/index.js`: replace the top-level-await art loader with a static `import { art } from './art/index.js'` (all art exists now) — remove the `withArt` fallback.
