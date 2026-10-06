@@ -373,6 +373,22 @@ export function reveal(run, id) {
   else sayMessage(run, 'found', nameParams(run, id));
 }
 
+/**
+ * Reveals several items in order (A8.6 SEARCH, the `reveal` effect). A `found` reaction
+ * may establish an ending; the loop then stops, so later items stay hidden (A7.7 E1).
+ * @param {Run} run
+ * @param {string|string[]} ids
+ * @returns {boolean} whether there was anything to reveal
+ */
+export function revealEach(run, ids) {
+  const list = Array.isArray(ids) ? ids : [ids];
+  for (const id of list) {
+    if (run.state.ended !== null) break;
+    reveal(run, id);
+  }
+  return list.length > 0;
+}
+
 /** Once-only award (A8.11): points capped at maxScore, `scoreUp` message. */
 export function award(run, id) {
   const { state, content } = run;
@@ -629,7 +645,7 @@ const EFFECTS = {
   setVar: (run, v) => { for (const [name, val] of Object.entries(v)) setVar(run, name, varValue(run, name, val)); },
   setItem: (run, v) => { for (const [id, patch] of Object.entries(v)) setItem(run, id, patch); },
   setNpc: (run, v) => { for (const [id, patch] of Object.entries(v)) setNpcState(run, id, patch); },
-  reveal: (run, v) => each(v, (id) => reveal(run, id)),
+  reveal: (run, v) => revealEach(run, v),
   move: (run, v) => { for (const [id, loc] of Object.entries(v)) moveEntity(run, id, loc); },
   give: (run, v) => each(v, (id) => moveEntity(run, id, PLAYER)),
   money: (run, v) => adjustMoney(run, v),

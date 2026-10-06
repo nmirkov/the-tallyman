@@ -35,7 +35,8 @@ export const VERBS = deepFreeze([
   },
   {
     id: 'search', class: 'world', words: ['search', 'rummage', 'look in', 'look under', 'look behind'],
-    patterns: ['<word>', '<word> {dobj}', 'look in|under|behind {dobj}'],
+    // SEARCH ROOM / SEARCH AROUND are bare SEARCH (A8.6); two literals outrank `{dobj}`.
+    patterns: ['<word>', 'search|rummage around|room', '<word> {dobj}', 'look in|under|behind {dobj}'],
   },
   { id: 'read', class: 'world', words: ['read'], patterns: ['<word> {dobj}'] },
   { id: 'listen', class: 'world', words: ['listen', 'hear'], patterns: ['<word>', '<word> to {dobj}'] },

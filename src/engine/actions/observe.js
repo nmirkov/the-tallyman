@@ -3,7 +3,7 @@
 
 import { PLAYER } from '../types.js';
 import {
-  runOf, describeRoom, renderText, emitText, sayContents, reveal, runReaction, kindOf,
+  runOf, describeRoom, renderText, emitText, sayContents, revealEach, runReaction, kindOf,
 } from '../api.js';
 import * as world from '../world.js';
 import {
@@ -69,16 +69,11 @@ function hiddenInRoom(api, roomId) {
   });
 }
 
-function revealAll(api, ids) {
-  for (const id of ids) reveal(runOf(api), id);
-  return ids.length > 0;
-}
-
 function search(cmd, api) {
   const id = cmd.dobj;
   if (id === undefined) {
     if (!lit(api)) return refuse(api, 'searchDark');
-    if (!revealAll(api, hiddenInRoom(api, api.state.roomId))) tell(api, 'nothingFound');
+    if (!revealEach(runOf(api), hiddenInRoom(api, api.state.roomId))) tell(api, 'nothingFound');
     return OK;
   }
   if (isNpc(api, id)) return refuse(api, 'searchNpc', id);
@@ -86,7 +81,7 @@ function search(cmd, api) {
   if (!isItem(api, id)) return succeed(api, 'nothingFound');
   if (!world.isOpen(api.state, api.content, id)) return refuse(api, 'searchClosed', id);
   const hidden = world.contentsOf(api.state, id).filter((c) => api.state.items[c].hidden === true);
-  if (revealAll(api, hidden)) return OK;
+  if (revealEach(runOf(api), hidden)) return OK;
   if (!sayContents(runOf(api), id)) tell(api, 'nothingFound');
   return OK;
 }

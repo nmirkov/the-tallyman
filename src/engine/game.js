@@ -182,7 +182,8 @@ export function createGame(options = {}) {
 
   /**
    * Runs `fn` with error containment (A7.9): on an exception the state and UNDO snapshot
-   * roll back and the call returns `[engineError]` — or, in strict mode, rethrows.
+   * roll back and the call returns `[engineError]` — or, in strict mode, rethrows after
+   * the rollback, so a caught strict failure leaves the game exactly as it was.
    * @param {(lineStart: object) => void} fn
    * @returns {OutputEvent[]}
    */
@@ -194,9 +195,9 @@ export function createGame(options = {}) {
       fn(lineStart);
       return finish(run.events);
     } catch (e) {
-      if (strict) throw e;
       run.state = lineStart;
       undoSnapshot = prevUndo;
+      if (strict) throw e;
       run.events = [];
       emitText(run, message(run, 'engineError', { error: String(e?.message ?? e) }), 'system');
       return finish(run.events);
@@ -305,7 +306,7 @@ export function createGame(options = {}) {
         runBarrier(parsed);
         return STOP;
       } else {
-        cmd = fromResult(resolve(searchAround(parsed), state, content, vocab, run.hook, resolverOpts));
+        cmd = fromResult(resolve(parsed, state, content, vocab, run.hook, resolverOpts));
         if (!cmd) return STOP;
       }
     }
@@ -316,16 +317,6 @@ export function createGame(options = {}) {
   function sayCancel(r) {
     if (r.text !== undefined) say(run, r.text, undefined, null);
     else emitText(run, message(run, r.message ?? 'confirmCancelled', r.params ?? {}), 'system');
-  }
-
-  /** SEARCH AROUND = bare SEARCH (A8.6). */
-  function searchAround(parsed) {
-    const words = parsed.dobj?.words;
-    if (parsed.verb === 'search' && Array.isArray(words) && words.length === 1 && words[0] === 'around') {
-      const { dobj, ...rest } = parsed;
-      return rest;
-    }
-    return parsed;
   }
 
   /**
@@ -397,9 +388,9 @@ export function createGame(options = {}) {
       refresh();
       return { ok: true, events: finish(run.events) };
     } catch (e) {
-      if (strict) throw e;
       run.state = prevState;
       undoSnapshot = prevUndo;
+      if (strict) throw e;
       return { ok: false, error: message(run, 'engineError', { error: String(e?.message ?? e) }), events: [] };
     } finally {
       run.events = [];

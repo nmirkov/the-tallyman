@@ -520,7 +520,7 @@ A word is **known** iff it is in this merged vocabulary or is a number. Engine v
 | `climb` | world | climb, scale, clamber | `climb {dobj}`, `climb up\|down`, `climb up\|down {dobj}` | up/down = `go u/d` |
 | `look` | world | look, l | `look`, `look around` | |
 | `examine` | world | examine, x, look at, inspect, check, describe, study | `examine {dobj}` | |
-| `search` | world | search, rummage, look in, look under, look behind | `search`, `search {dobj}`, `look in\|under\|behind {dobj}` | |
+| `search` | world | search, rummage, look in, look under, look behind | `search`, `search\|rummage around\|room` (= bare, A8.6), `search {dobj}`, `look in\|under\|behind {dobj}` | |
 | `read` | world | read | `read {dobj}` | |
 | `listen` | world | listen, hear | `listen`, `listen to {dobj}` | |
 | `smell` | world | smell, sniff | `smell`, `smell {dobj}` | |
@@ -742,7 +742,8 @@ endings → status" is kept; D4 is inserted between schedules and light (A17 C9)
 - **E1** At D8: if `state.ended` is already set (death or wrong man via `end`), that ending stands — death "ends immediately" and beats anything else. Otherwise the first ending in `content.endings` whose `when` holds wins.
   The first ending set in a turn is final: `end` never overwrites it, and once it is set no
   further Reaction effect applies — not even the rest of an enclosing reaction whose
-  `movePlayer` triggered a fatal `onEnter` (TT-101). D1, D8, D9 and the `end` event still run.
+  `movePlayer` triggered a fatal `onEnter` (TT-101). Engine-owned loops stop too: a fatal
+  `found` stops the rest of a `reveal` list and of SEARCH (TT-102). D1, D8, D9 and the `end` event still run.
 - **E2** The Tallyman orders its `when` endings victory → pyrrhic → got-away → fifth-stroke (A14), so an action that achieves victory on turn 300 wins (victory precedes midnight).
 - **E3** On ending: `ended = id`, `ctx.pending = null`; events `status` then `end` (with `text`, `title`, `score`, `rank`, …). Remaining chain commands are discarded with the notice before `end`.
 - **E4** Ended mode accepts only `ENDED_VERBS` (A7.1 step 2). UNDO after a death restores the state before the fatal line.
@@ -759,7 +760,8 @@ endings → status" is kept; D4 is inserted between schedules and light (A17 C9)
 `input()`, `load()`, `undo()` and `restart()` never throw. Any exception inside them (engine
 bug, throwing hook, invalid `setVar`) restores `lineStart` and the previous UNDO snapshot,
 discards the events of that call and returns `[text system engineError]`. With
-`strict: true` the exception is rethrown instead (tests, fuzzing). The game is the only
+`strict: true` the same rollback happens first and the exception is then rethrown instead
+of the `engineError` result (tests, fuzzing) (TT-102). The game is the only
 transaction boundary: no inner layer (resolver, Cond evaluation for scope or exits) turns a
 hook exception into an ordinary result.
 

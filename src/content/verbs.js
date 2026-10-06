@@ -28,7 +28,7 @@ export const verbs = [
   { id: 'free', words: ['unshackle'] },
   // `cut {dobj} free`: not in STORY §7.4, but §7.2 step 29 lists CUT HARROW FREE.
   { id: 'cut', words: ['crop'], patterns: ['cut {dobj} free'] },
-  // Not in STORY §7.4: SEARCH ROOM / SEARCH HERE mean a bare SEARCH (STORY §7.2 step 17).
-  // Without this, "room" binds to the room key (its name) instead of the room.
-  { id: 'search', patterns: ['search room|here'] },
+  // Not in STORY §7.4: SEARCH HERE means a bare SEARCH (STORY §7.2 step 17). SEARCH ROOM /
+  // SEARCH AROUND are engine patterns (A8.6), so "room" never binds to the room key.
+  { id: 'search', patterns: ['search here'] },
 ];

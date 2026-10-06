@@ -2,7 +2,7 @@
 id: TT-102
 title: Fix Codex R1 round-2 findings (reveal loops after death, strict-mode rollback)
 milestone: BUG
-status: in-progress
+status: done
 agent: engine-dev
 model: opus
 depends: [TT-101]
@@ -21,4 +21,4 @@ Resolve the two blocking findings and the non-blocking note in `reviews/code-rev
 `src/engine/**`, `tests/unit/*`, `tests/fixtures/*` (additive)
 
 ## Acceptance criteria
-- [ ] Named tests written first, fail, then pass. `npm run check` green.
+- [x] Named tests written first, fail, then pass. `npm run check` green.
