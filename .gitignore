@@ -4,3 +4,7 @@ reviews/
 *.log
 .DS_Store
 saves/
+
+# Local session notes (orchestrator handover/status) - never published
+docs/HANDOVER.md
+docs/STATUS.md
