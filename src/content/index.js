@@ -12,7 +12,8 @@
 //   endings.js     endings                                               STORY §8.7
 //   beats.js       scripted beats and story daemons                      STORY §8.4, §9
 //   hints.js       hint steps                                            STORY §10
-//   art/index.js   pictures - owned by the artist tickets (TT-019...TT-021), optional here
+//   art/index.js   pictures - owned by the artist tickets (TT-019...TT-021); static import
+//                  so the single-file esbuild (iife) bundle needs no top-level await
 
 import { meta, rules, zones, help } from './rules.js';
 import { evidence, notes, vars, scoring } from './registries.js';
@@ -33,6 +34,7 @@ import { pike } from './npcs/pike.js';
 import { ashdown } from './npcs/ashdown.js';
 import { silas } from './npcs/silas.js';
 import { harrow } from './npcs/harrow.js';
+import { art } from './art/index.js';
 
 /**
  * Item content order = STORY §5.1 table order (it drives room listings, A8.4, and the
@@ -62,34 +64,10 @@ function orderedItems() {
   return Object.fromEntries(ITEM_ORDER.filter((id) => Object.hasOwn(all, id)).map((id) => [id, all[id]]));
 }
 
-/**
- * The artist's registry (`src/content/art/index.js`, `export const art`), if it exists yet.
- * Only a missing module is tolerated; a broken one still fails loudly.
- */
-async function loadArt() {
-  try {
-    const mod = await import('./art/index.js');
-    return mod.art ?? mod.default ?? {};
-  } catch (e) {
-    if (e && e.code === 'ERR_MODULE_NOT_FOUND' && String(e.message).includes('/art/index.js')) return {};
-    throw e;
-  }
-}
-
-const art = await loadArt();
-const hasArt = (id) => Object.hasOwn(art, id);
-
-/** Ending / dark pictures are references (lint L03), so they are kept only once drawn. */
-const withArt = (obj, key) => {
-  if (obj[key] === undefined || hasArt(obj[key])) return obj;
-  const { [key]: _missing, ...rest } = obj;
-  return rest;
-};
-
 /** @type {import('../engine/types.js').ContentBundle} */
 export const content = {
   meta,
-  rules: withArt(rules, 'darkPicture'),
+  rules,
   zones,
   rooms: Object.assign({}, ...ZONE_MODULES.map((z) => z.rooms)),
   items: orderedItems(),
@@ -100,7 +78,7 @@ export const content = {
   notes,
   scoring,
   hints,
-  endings: endings.map((e) => withArt(e, 'art')),
+  endings,
   beats,
   daemons,
   hazards,

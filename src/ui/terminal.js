@@ -689,6 +689,8 @@ export function createTerminal(screen, opts = {}) {
   mq?.addEventListener?.('change', onMotion);
 
   let drawnKey = '';
+  /** Optional colour override ({paper, roles}) for screens with their own paper (TT-012 endings). */
+  let colors = null;
   /** Advance and draw the region; call once per animation frame when `autoLoop` is off. */
   function frame(now = win.performance.now()) {
     core.tick(now);
@@ -696,8 +698,9 @@ export function createTerminal(screen, opts = {}) {
     if (k === drawnKey) return;
     drawnKey = k;
     const { top, rows } = core.compose(now);
+    const paper = colors?.paper ?? null;
     rows.forEach((cells, r) => cells.forEach((c, x) => {
-      screen.put(x, top + r, c.ch, c.role);
+      screen.put(x, top + r, c.ch, colors?.roles?.[c.role] ?? c.role, paper);
       if (c.inverse) screen.invert(x, top + r, true);
     }));
   }
@@ -724,6 +727,12 @@ export function createTerminal(screen, opts = {}) {
     setInputEnabled(on) { core.setInputEnabled(on); if (on) syncField(); },
     /** Force a full redraw of the region on the next frame (e.g. after a theme change). */
     invalidate() { drawnKey = ''; },
+    /**
+     * Draw the region with other colours: `paper` replaces the theme background and
+     * `roles` maps a text role to a colour spec (e.g. on a black ending screen). null restores.
+     * @param {{paper?: string, roles?: Record<string,string>}|null} map
+     */
+    setColors(map) { colors = map ?? null; drawnKey = ''; },
     focus,
     frame,
     /** Resolves when all queued output has been shown and the input line is live. */

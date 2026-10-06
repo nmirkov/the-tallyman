@@ -2,9 +2,9 @@
 id: TT-014
 title: Boot: tape-loading screen, title screen, intro, ending screens
 milestone: M2
-status: todo
+status: in-progress
 agent: ui-dev
-model: sonnet
+model: opus
 depends: [TT-012, TT-013, TT-021]
 ---
 # TT-014 — Boot sequence

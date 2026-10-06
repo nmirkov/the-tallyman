@@ -2,7 +2,7 @@
 id: TT-012
 title: Presentation integration: status bar, picture panel, themes, engine wiring, storage adapter
 milestone: M2
-status: in-progress
+status: done
 agent: ui-dev
 model: opus
 depends: [TT-011, TT-013]

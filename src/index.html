@@ -2,16 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<meta name="description" content="The Tallyman - a 1984 crime-thriller text adventure for a 40x25 home-computer screen.">
 <title>The Tallyman</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #352879; }
-  body { display: flex; align-items: center; justify-content: center; }
-  canvas { image-rendering: pixelated; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  #stage { position: fixed; left: 0; top: 0; width: 100%; height: 100%; }
+  #stage canvas { position: absolute; inset: 0; display: block; image-rendering: pixelated; touch-action: manipulation; }
+  noscript { color: #fff; font: 16px monospace; display: block; padding: 16px; }
 </style>
 </head>
 <body>
-<canvas id="screen" width="320" height="200"></canvas>
+<div id="stage"><canvas id="screen" aria-label="The Tallyman. Type commands and press Enter; the transcript below follows the game."></canvas></div>
+<noscript>The Tallyman needs JavaScript.</noscript>
 <script type="module" src="./ui/main.js"></script>
 </body>
 </html>
