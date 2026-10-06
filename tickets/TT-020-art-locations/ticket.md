@@ -2,7 +2,7 @@
 id: TT-020
 title: Art: all remaining location pictures
 milestone: M3
-status: in-progress
+status: done
 agent: artist
 model: opus
 depends: [TT-019]
