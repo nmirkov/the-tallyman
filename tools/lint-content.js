@@ -17,7 +17,7 @@ import {
   PALETTE_KEYS, ART_FX, LIMITS, MIDNIGHT_TURN,
 } from '../src/engine/types.js';
 import { varProblem, initialCaps } from '../src/engine/state.js';
-import { fxMayChange, cellAt } from '../src/ui/fx.js';
+import { fxMayChange, cellAt } from '../src/shared/art-cells.js';
 
 /**
  * @typedef {{rule: string, path: string, message: string}} Finding
@@ -715,7 +715,7 @@ function runRules(content, options, errors, warnings) {
     asArr(a.fx).forEach((fx, i) => { if (!ART_FX.includes(fx)) err('L11', `${p}.fx[${i}]`, `unknown effect ${q(fx)}`); });
   }
 
-  // L11 (TT-106): an ending art's rows 19-24 carry the title, score, rank and the ending
+  // L24 (TT-106, own id since TT-132): an ending art's rows 19-24 carry the title, score, rank and the ending
   // prompt; its fx must never touch them (the fx layer restores cells it changed, which
   // would wipe the text drawn there).
   const reservedTop = ART_SIZES.screen.h - 6;
@@ -733,7 +733,7 @@ function runRules(content, options, errors, warnings) {
         const c = cellAt(a, x, y);
         const hit = fxs.find((f) => fxMayChange(f, c));
         if (hit) {
-          err('L11', `art.${e.art}.chars[${y}]`, `ending art row ${y} is reserved for the ending text, but fx "${hit}" can change cell ${x} (${q(c.ch)})`);
+          err('L24', `art.${e.art}.chars[${y}]`, `ending art row ${y} is reserved for the ending text, but fx "${hit}" can change cell ${x} (${q(c.ch)})`);
           break;
         }
       }

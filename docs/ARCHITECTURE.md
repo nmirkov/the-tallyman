@@ -1055,6 +1055,7 @@ one space → truncate to `LIMITS.inputLength`.
 | L21 | A noun/adjective equal to a direction, verb word or filler | W | W |
 | L22 | A flag tested in a Cond but never set anywhere | W | W |
 | L23 | Hint steps: valid `done`, non-empty `tiers` | E | E |
+| L24 | Screen art (endings): fx must not be able to change cells in the reserved UI rows 19-24 (TT-106/TT-132) | E | E |
 
 Output lines: `ERROR L05 rooms.lock.exits.e: no exit back from towpath` / `WARN L12 …`.
 Exit code 1 iff any error. `npm run lint:content` is incremental; `--strict` is required

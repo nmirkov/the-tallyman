@@ -24,6 +24,9 @@ export const TERMINAL_DEFAULTS = Object.freeze({
  * Longest step the typewriter takes from one tick (ms). The host may stop ticking the
  * terminal for a while (boot / title screen, a background tab); that gap must not be spent
  * as typing budget on the next frame (TT-106).
+ * Trade-off: below 10 fps (frames longer than 100 ms) the typewriter runs slower than its
+ * nominal 400 cps. No realistic device renders that slowly, and a larger cap would let a
+ * resumed background tab dump a screenful at once, so 100 is kept (TT-132).
  */
 export const MAX_TICK_MS = 100;
 
@@ -615,6 +618,9 @@ export function createTerminalCore(opts = {}) {
  */
 export function keyMods(e) {
   const meta = !!e.metaKey;
+  // The Ctrl+Alt fallback is deliberately broad: browsers that do not report AltGraph send
+  // AltGr as Ctrl+Alt, and no browser shortcut uses Ctrl+Alt + a punctuation character.
+  // Ctrl+Alt+letter/digit stays a shortcut (TT-132).
   const k = typeof e.key === 'string' ? e.key : '';
   const altGraph = !!e.getModifierState?.('AltGraph')
     || (!!e.ctrlKey && !!e.altKey && !meta && Array.from(k).length === 1 && !/^[a-z0-9]$/i.test(k));

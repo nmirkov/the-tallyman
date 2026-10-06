@@ -361,6 +361,8 @@ win.addEventListener('keydown', (e) => {
   }
 }, { capture: true });
 win.addEventListener('keyup', (e) => { if (e.key === heldKey) heldKey = null; }, { capture: true });
+// a keyup lost to a focus change must not leave the key blocked
+win.addEventListener('blur', () => { heldKey = null; });
 win.addEventListener('pointerdown', (e) => {
   unlock();
   if (mode === 'boot') {

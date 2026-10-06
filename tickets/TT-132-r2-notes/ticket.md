@@ -2,7 +2,7 @@
 id: TT-132
 title: R2 round-2 UI notes
 milestone: BUG
-status: in-progress
+status: done
 agent: ui-dev
 model: sonnet
 depends: [TT-106]

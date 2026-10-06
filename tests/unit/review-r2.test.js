@@ -113,7 +113,7 @@ function endArt(fx, patch = () => {}) {
   return a;
 }
 
-test('lint L11: an ending art whose fx can touch rows 19-24 is an error', () => {
+test('lint L24: an ending art whose fx can touch rows 19-24 is an error', () => {
   const lint = (c) => lintContent(c, { hasGlyph });
   const withArt = (a) => {
     const c = freshMini();
@@ -121,7 +121,7 @@ test('lint L11: an ending art whose fx can touch rows 19-24 is an error', () => 
     c.endings.find((e) => e.id === 'death_fall').art = 'end_test';
     return c;
   };
-  const l11 = (r) => r.errors.filter((e) => e.rule === 'L11');
+  const l11 = (r) => r.errors.filter((e) => e.rule === 'L24');
   assert.deepEqual(l11(lint(withArt(endArt(['rain'])))), [], 'all reserved cells inert');
 
   const rainHole = endArt(['rain'], (a) => { a.chars[20] = `${'▓'.repeat(5)} ${'▓'.repeat(34)}`; });
