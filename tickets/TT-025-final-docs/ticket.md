@@ -2,7 +2,7 @@
 id: TT-025
 title: Final docs and progress page
 milestone: M4
-status: todo
+status: done
 agent: orchestrator
 model: opus
 depends: [TT-024, TT-130, TT-131, TT-132]

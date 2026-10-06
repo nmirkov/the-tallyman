@@ -15,3 +15,10 @@ Two clean-context AI testers played via the terminal player with no access to th
 | TT-130 | high | Finale: both testers tried ACCUSE/SHOW in the Counting Room; nothing pointed to HANDCUFF PIKE until the death text. |
 | TT-131 | medium | Parser/content gaps: ASK HARROW hijacked by "Harrow's" items, Church Lane IN, OIL CABINET, GLOVEBOX/BOOT, SAY, BUY … FOR, X alone, topic synonyms (Silas/tallyman), READ NOTICE vs EXAMINE, LISTEN for praying, repetitive torch flicker. |
 | TT-132 | low | R2 round-2 UI notes (not playtest). |
+
+## Re-test after fixes (TT-130/131)
+| Tester | Setup | Result |
+|---|---|---|
+| C (sonnet, clean context) | dropped at the Counting Room door after the first 89 walkthrough commands | **won first attempt**, 100/100: `examine pike` → Harrow: "Cuffs, kid!" → `cuff pike`, `free harrow`. Scene fairness 8/10 (was a death for both earlier testers). |
+
+TT-024 closed: both original testers won; the finale-guidance fix is confirmed blind.
