@@ -43,3 +43,6 @@ All blocking items resolved. Notes and where they are handled:
 
 ### Round 2 — 2026-10-06 — CHANGES REQUIRED
 All 9 round-1 findings RESOLVED (reproductions re-run by Codex). 2 new blocking: reveal-list loops continue after a nested death; strict-mode rethrow happens before state/UNDO rollback. → **TT-102**.
+
+### Round 3 — 2026-10-06 — **APPROVED WITH NOTES** (same-vendor fallback, D-009)
+Codex unavailable (workspace out of credits). Independent Claude reviewer (Fable, fresh context, read-only): both round-2 issues RESOLVED (reproductions re-run), 20 scripted contract scenarios + 12 000-line fuzz found no defects. 6 non-blocking notes → **TT-103** (low). Tag `m1`.
