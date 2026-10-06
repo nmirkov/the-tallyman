@@ -1,6 +1,6 @@
 # Status
 
-**Phase:** M1 engine built (Codex R1 fixes in progress) · M3 content & art in parallel.
+**Phase:** M4 release — paused at the usage limit. Game complete & winnable; finale-fairness fixes (TT-130/131) next.
 **Updated:** 2026-10-06
 
 | Milestone | State |
@@ -17,3 +17,4 @@
 - 2026-10-06 — M0 complete (contract approved by orchestrator). TT-005/006/007/013 delivered and verified in clean worktrees; 640 tests green.
 - 2026-10-06 — Engine complete (TT-008/009/010). Codex R1 found 9 real defects → TT-101. Story bible approved; real game playable in Town/Canal; art style approved.
 - 2026-10-06 — Codex ran out of credits (D-009): fallback independent reviewer. R1 APPROVED WITH NOTES → tag m1. All art done (42 locations, title, 6 endings). Game winnable 100/100 in the engine.
+- 2026-10-06 03:35 — M2 and M3 approved (tags m2, m3). Smoke 8/8. Blind playtest: both testers won; finale guidance is the main fix left. Paused: Claude spend limit.

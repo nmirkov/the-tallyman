@@ -5,14 +5,16 @@
 > the tickets in `tickets/`. Nenad asked for a fully autonomous build — do not ask
 > him questions; decide and log in DECISIONS.md.
 
-## Snapshot — 2026-10-06, M2 integration + softlock fixes
-- Tags: `plan-approved`, `m0`, `m1`. ~1700 tests green (9 todo = known softlocks).
-- **Codex is out of credits** (D-009): reviews use an independent Claude reviewer (model fable, fresh context, writes only reviews/<name>.md). Retry Codex at each milestone: `codex exec ... -m gpt-6-astra` (check log tail for "out of credits").
-- Done: TT-001…022 except TT-012/014/023/024/025; TT-101/102/103 (R1 fixes). Art complete (42 + dark + title + 6 endings).
-- **In flight:** TT-012 browser integration (ui-dev/opus); TT-120…123 softlock fixes (engine-dev/opus; one implementation.md in TT-120 folder).
-- **Next:** commit both (check each's files; TT-012 owns src/ui/** + src/content/index.js) → TT-014 boot (spec ready) → R2 review (M2: src/ui/**, audio) → R3 review (M3 content+QA) → TT-023 smoke (spec ready) → TT-024 blind playtest (spec ready; clean-context testers!) → TT-025 docs → R4 → tag v1.0.
-- Art polish candidates (weak): crypt, vestry, police_house, cells, number_13, entrance_hall, boiler_room, moor_road; ending_death cone; victory cars.
-- Lesson: never wait on a process with `pgrep -f <pattern>` inside a loop whose own command line contains the pattern — wait on the PID.
+## Snapshot — 2026-10-06 03:35, paused (Claude spend limit hit; resets 03:40 Europe/Belgrade)
+- HEAD `4ab05da` (TT-023), working tree clean. Tags: plan-approved, m0, m1, m2, m3. 1846 tests green; `npm run smoke` 8/8.
+- Codex still out of credits (D-009) -> fallback reviewer (model fable).
+- **Game is complete and winnable** (browser + terminal). Blind playtest done: both testers won (A 100/100 on 2nd try, B 89/100), 8/10.
+- **Remaining work (in order):**
+  1. TT-130 finale guidance (high) then TT-131 playtest parser/content gaps (medium) — specs ready; agent was killed by the spend limit before writing anything. Re-dispatch one writer+engine agent (opus) for both.
+  2. TT-132 R2 UI notes (low, sonnet).
+  3. Re-run `npm run smoke`; quick re-playtest of the finale (fresh blind agent, finale only).
+  4. TT-025 final docs (README: how to play, commands, credits incl. font8x8 public domain), final progress page.
+  5. R4 final review (fallback reviewer unless Codex has credits), then tag `v1.0`.
 
 ## How the orchestrator works
 1. Dispatch: `Agent(subagent_type: general-purpose, model: <ticket model>)`, prompt =
