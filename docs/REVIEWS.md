@@ -51,3 +51,8 @@ Codex unavailable (workspace out of credits). Independent Claude reviewer (Fable
 
 ### Round 1 — 2026-10-06 — **APPROVED WITH NOTES** (same-vendor fallback, D-009)
 Reviewer played the game adversarially via tools/play.js. 0 blocking; 13 notes (incl. one unwarned dark death path, missing Counting Room scenery, TIE verb, stale QA report) → **TT-105**.
+
+## Presentation review R2 (M2)
+
+### Round 1 — 2026-10-06 — CHANGES REQUIRED (same-vendor fallback, D-009)
+Reviewer drove dist/tallyman.html in headless Chrome. 2 blocking (typewriter skipped after QUIT→title→new game; title without prior gesture needs two key presses) + 12 notes → **TT-106**.
