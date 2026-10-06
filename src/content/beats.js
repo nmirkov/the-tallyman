@@ -44,10 +44,20 @@ export const beats = [
       ],
     },
   },
-  // Cosmetic only (PLAN §2.2 #1): the torch never actually fails.
+  // Cosmetic only (PLAN §2.2 #1): the torch never actually fails. TT-131: three times at most,
+  // spaced, and the third pays it off (it was firing a dozen times and never meant anything).
+  // `when` (not `at`): each fires once, at the first chance after its hour.
   {
-    id: 'torch_flicker', every: 7, when: [{ turnGte: 180 }, { carried: 'torch' }, { on: 'torch' }],
-    run: { chance: 0.5, say: 'Your torch flickers, browns out, and steadies again.' },
+    id: 'torch_flicker', when: [{ turnGte: 185 }, { carried: 'torch' }, { on: 'torch' }],
+    run: { say: 'Your torch flickers, browns out, and steadies again.' },
+  },
+  {
+    id: 'torch_flicker_2', when: [{ turnGte: 225 }, { carried: 'torch' }, { on: 'torch' }],
+    run: { say: 'The torch browns out again, and comes back when you shake it. Fresh batteries. It should not be doing that.' },
+  },
+  {
+    id: 'torch_flicker_3', when: [{ turnGte: 262 }, { carried: 'torch' }, { on: 'torch' }],
+    run: { say: 'The beam jumps, and jumps again - and you see it is not the torch. It is your hand. You hold it still with the other one.' },
   },
   {
     id: 'fog_figure', when: [{ in: 'tally_stone' }, { turnGte: 30 }],
@@ -74,6 +84,9 @@ export const beats = [
   },
 ];
 
+const CIRCLES = 'He circles, knife low. "One," he says, matching your steps. "Two."';
+const LUNGE = 'He lunges. The knife opens your sleeve and the arm under it, and you feel nothing at all, which frightens you more. "Four," he says. Next time it will not be your arm.';
+
 /** Step D4, in this order: Pike's arrival, then the attack counter (STORY §8.4, A14.3). */
 export const daemons = [
   {
@@ -94,12 +107,33 @@ export const daemons = [
       setVar: { attack: { add: 1 } },
       then: [
         { if: [{ lit: true }, { var: 'attack', gte: 5 }], sfx: 'scream', end: 'death_pike' },
+        // TT-130: every lit warning carries Harrow's pointer - the cuffs if you have them,
+        // otherwise the way out (leaving pauses the count) - unless he has just shouted it in
+        // answer to this turn's command (HARROW_CUFFS sets `harrow_shouted`).
         {
           if: [{ lit: true }, { var: 'attack', eq: 4 }], style: 'alert', nerve: 20, sfx: 'sting',
-          say: 'He lunges. The knife opens your sleeve and the arm under it, and you feel nothing at all, which frightens you more. "Four," he says. Next time it will not be your arm.',
+          say: [
+            { if: 'harrow_shouted', text: LUNGE },
+            { if: { carried: 'handcuffs' }, text: `${LUNGE} Harrow is shouting now: "The cuffs, kid! NOW!"` },
+            { text: `${LUNGE} Harrow is shouting now: "Get out, kid! OUT!"` },
+          ],
         },
-        { if: [{ lit: true }, { var: 'attack', eq: 3 }], style: 'alert', say: '"Three," says Pike, and takes a step closer. Behind him Harrow is trying to say something. Do something.' },
-        { if: [{ lit: true }, { var: 'attack', eq: 2 }], style: 'alert', say: 'He circles, knife low. "One," he says, matching your steps. "Two."' },
+        {
+          if: [{ lit: true }, { var: 'attack', eq: 3 }], style: 'alert',
+          say: [
+            { if: 'harrow_shouted', text: '"Three," says Pike, and takes a step closer.' },
+            { if: { carried: 'handcuffs' }, text: '"Three," says Pike, and takes a step closer. Behind him Harrow gets the words out at last: "Cuff him, kid! The cuffs!"' },
+            { text: '"Three," says Pike, and takes a step closer. Behind him Harrow gets the words out at last: "Get out, kid! Cuffs - my car!"' },
+          ],
+        },
+        {
+          if: [{ lit: true }, { var: 'attack', eq: 2 }], style: 'alert',
+          say: [
+            { if: 'harrow_shouted', text: CIRCLES },
+            { if: { carried: 'handcuffs' }, text: `${CIRCLES} Harrow, hoarse: "Cuffs, kid!"` },
+            { text: `${CIRCLES} Harrow, hoarse: "No cuffs? Then get out, kid!"` },
+          ],
+        },
         // Dark: fatal only once `dark_warned` is set - by this warning, or by a second, deliberate
         // TURN OFF after the refusal (STORY §8.4, TT-121, TT-105). Any other dark turn warns first.
         { if: [{ lit: false }, { var: 'attack', gte: 2 }, 'dark_warned'], sfx: 'scream', end: 'death_pike' },
@@ -107,4 +141,6 @@ export const daemons = [
       ],
     },
   },
+  // TT-130: Harrow's shout lasts one turn.
+  { id: 'harrow_quiet', run: { if: 'harrow_shouted', clearFlag: 'harrow_shouted' } },
 ];

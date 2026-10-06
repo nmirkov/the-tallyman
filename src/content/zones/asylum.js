@@ -2,6 +2,13 @@
 
 import { PRY_CABINET, MOVE_DRAWER } from '../shared.js';
 
+/** OIL CABINET (TT-131): the oil can is the wrong tool, and the game says why. */
+const OIL_CABINET = [
+  { if: { open: 'cabinet' }, say: "It's open. It doesn't need oil." },
+  { if: { carried: 'oil_can' }, say: "You dribble oil along the seams. The rust drinks it and gives nothing back. It isn't a stiff hinge - the whole drawer has rusted into one piece. That wants levering, not oiling." },
+  "Oil wouldn't shift that much rust anyway. It wants levering open.",
+];
+
 /* ------------------------------------------------------------------------ *
  *  Rooms                                                                    *
  * ------------------------------------------------------------------------ */
@@ -67,6 +74,7 @@ export const rooms = {
       { names: ['marks', 'tally marks', 'pencil', 'wall'], desc: 'Gates of five, row after row, thousands. A boy counted something here every night for four years. Near the top the rows go wrong - the fifth stroke missing, again and again. Four, four, four.' },
       { names: ['drip', 'water', 'ceiling'], desc: 'From the ceiling into a puddle. Drip. Drip. You catch yourself counting.' },
     ],
+    before: { listen: 'Drip. Drip. Drip. Drip. A pause, exactly as long as one more drip. Then it starts again.' }, // TT-131
     // Once, and only with a light (STORY §9.2).
     onEnter: {
       if: [{ lit: true }, '!ward_counting'], setFlag: 'ward_counting', sfx: 'whisper', style: 'whisper',
@@ -86,6 +94,11 @@ export const rooms = {
         to: 'tunnel', if: ['morgue_hatch_found', { on: 'torch' }], hidden: true,
         msg: [{ if: '!morgue_hatch_found', text: "You can't go that way." }, { text: 'Not without a light.' }],
       },
+    },
+    // TT-131: come up the rungs from the tunnel and you have found the hatch - from below.
+    onEnter: {
+      if: [{ hook: 'from_tunnel' }, '!morgue_hatch_found'], setFlag: 'morgue_hatch_found', sfx: 'creak',
+      say: 'You come up the rungs through a square hatch in the floor. Above it drawer 4 has been run back into the wall on greased rails - that is why it never sat flush. The hatch is your way back DOWN.',
     },
     scenery: [
       { names: ['tiles', 'floor'], desc: 'White, crazed, a few missing like teeth.' },
@@ -115,7 +128,7 @@ export const items = {
       { if: { open: 'cabinet' }, text: 'A steel cabinet marked P-R, its drawer levered open.' },
       { text: 'A steel filing cabinet marked P-R. Rust has sealed every seam. You would need to lever it.' },
     ],
-    before: { open: PRY_CABINET, unlock: PRY_CABINET, break: PRY_CABINET, pry: PRY_CABINET },
+    before: { open: PRY_CABINET, unlock: PRY_CABINET, break: PRY_CABINET, pry: PRY_CABINET, oil: OIL_CABINET },
   },
   patient_file: {
     name: 'patient file', names: ['file', 'patient file', 'folder'], adjectives: ['patient', 'manila', 'pike'], location: 'cabinet',

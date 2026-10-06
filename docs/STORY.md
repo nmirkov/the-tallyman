@@ -149,8 +149,18 @@ Useful: LOOK (L), INVENTORY (I), NOTES (your case notebook), TIME, SCORE, HINT (
 
 Chain commands with THEN or a full stop: TAKE TORCH. W THEN SEARCH.
 
-When you know who it is, ACCUSE them - you'll want at least three pieces of evidence on you. Each command takes thirty seconds. Midnight is turn 300.
+When you know who it is, ACCUSE them - you'll want at least three pieces of evidence on you. Words won't hold a killer, though: to take one in, ARREST or HANDCUFF them, and you'll need cuffs. Each command takes thirty seconds. Midnight is turn 300.
 ```
+(TT-130: the ARREST / HANDCUFF sentence was added after both blind testers tried only ACCUSE in the finale.)
+
+### 1.8 Engine message overrides (`content.messages`, A16) - TT-131
+| id | engine default | Tallyman |
+|---|---|---|
+| `fixed` | "That's fixed in place." | "You leave it where it is." (a tester: TAKE FLOWERS -> "fixed in place" is odd for a bunch of flowers) |
+| `allNotAllowed` | "You can't use ALL with that verb." | "One thing at a time, Sergeant." |
+
+Not a content message but the same pass: an absent named person is "<Name> isn't here." (engine,
+resolve.js), and X alone asks "What do you want to examine?" (parser.js).
 
 ---
 
@@ -356,7 +366,7 @@ Notation: `dir: target` ; conditions in `{ }` use Cond syntax; `msg` is the bloc
 | `chapel_street` | e: high_street ; w: back_alley ; in: number_13 |
 | `number_13` | out: chapel_street |
 | `back_alley` | ne: churchyard ; e: chapel_street |
-| `church_lane` | n: st_judes ; sw: high_street ; in: st_judes |
+| `church_lane` | n: st_judes ; sw: high_street (TT-131: no `in`; IN / ENTER COTTAGE -> BOARDED, §4.1) |
 | `st_judes` | n: churchyard ; e: vestry ; s: church_lane ; d: crypt ; out: church_lane |
 | `vestry` | w: st_judes |
 | `churchyard` | s: st_judes ; sw: back_alley |
@@ -442,6 +452,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `sign, nameboard` -> "BLACKMERE, white on maroon. Someone has scratched four short strokes under the B."
   - `rails, track, line, train` -> "The rails shine for a while and then the dark takes them. No more trains tonight."
   - `rain` -> "Lancashire rain: patient, thorough, personal."
+- before (TT-131): `listen` -> "Rain on the canopy, the gas lamp hissing, and the last of the train, a long way off. Then only the rain."
 - picture brief: canopy across top rows (dark grey girders, light-blue glass), gas lamp left with yellow halo, maroon/white BLACKMERE sign centre, receding red tail lamps right on black, blue rails converging. fx `rain`.
 
 #### `waiting_room` - Waiting Room
@@ -499,6 +510,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `regulars, drinkers, locals, men` -> "Three old men, three pints of mild. They have decided you are not here."
   - `bar, counter, pumps` -> "Thwaites on the pumps, a jar of pickled eggs, a till that rings like a church bell."
   - `stair, stairs, staircase` -> "Narrow, carpeted, up to the guest rooms. Harrow's is at the top."
+- before (TT-131): `say` -> '"Speak up, love," says Maggie. The regulars listen without looking up.'
 - picture brief: warm interior: dark brown beams across top, fire glowing orange-red left, bar centre-right with yellow brass pumps, Maggie as a small figure behind it (light grey hair, purple cardigan), three hunched dark figures at a table. No fx.
 
 #### `harrows_room` - Harrow's Room
@@ -535,6 +547,10 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `helmet` -> `[{ if: 'pike_fled', text: 'Pike's helmet, upturned. He went out without it, in a hurry.' }, { text: 'On its peg, polished.' }]`
   - `peg, pegs, cape` -> `[{ if: { var: 'pikeState', eq: 'desk' }, text: "A row of pegs by the door. Pike's cape hangs there - a long police cape, the old kind." }, { text: "A row of pegs by the door. Pike's peg is empty: his cape has gone out into the rain with him." }]` (Silas's "cape" pointer; the second after he flees or leaves - TT-105)
   - `floor, lino` -> `[{ if: 'pike_fled', text: "Brown lino, worn pale in front of the counter. Pike's helmet lies upturned where it fell." }, { text: 'Brown lino, worn pale in front of the counter.' }]` (TT-105)
+- TT-131 (blind playtest: X TUNIC at the desk described the button in your pocket):
+  - scenery `tunic, uniform, buttons` -> `[{ if: [{ var: 'pikeState', eq: 'desk' }, { found: 'ev_button' }], text: "Pike's tunic, buttoned to the throat - all but the second button down, which is missing. A thread hangs where it was." }, { if: { var: 'pikeState', eq: 'desk' }, text: "Pike's tunic, buttoned to the throat, every silver button polished." }, { text: "Pike's tunic went out of the door on Pike." }]`
+  - before `listen` -> `[{ if: { var: 'pikeState', eq: 'desk' }, say: "The clock. Under it, Pike's pencil on the desk: tap tap tap tap. Pause. Tap tap tap tap. He keeps time with it, exactly." }, "The clock, ticking too loudly for an empty room."]`
+  - before `say` -> `[{ if: { var: 'pikeState', eq: 'desk' }, say: '"Sorry, Sergeant?" Pike looks up from his tea, pleasant and blank. Tap tap tap tap.' }, "You say it to an empty office. The clock answers."]`
 - picture brief: interior: wooden counter across lower third, desk with green-shaded lamp and open white book, big round clock top-centre, blue lamp glow through the window top-left, Pike as a large dark-blue uniformed figure behind the counter (omit him? - no: draw him; the UI shows the same picture after he leaves, so draw the desk scene WITHOUT Pike to stay correct in every state). No fx.
 
 #### `cells` - Cells
@@ -592,6 +608,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `coal-hole, coal hole, lid` -> "A cast-iron lid, rusted into its ring. Nothing's gone down there in years."
   - `gate, back gate, chalk, strokes` -> "Children's chalk: four strokes, then a fifth slashed across them and smudged out by a sleeve. Kids playing at the Tallyman. Or somebody practising."
   - `gap, wall` -> "A gap where the wall has given up. Beyond it, gravestones."
+- before (TT-131): `open` -> `{ if: { hook: 'dobj_coalhole' }, say: "You get your fingers under the rim and heave. It's rusted into its ring and it stays there. Nobody has been down there in years - nobody has been able to." }`
 - picture brief: narrow alley, walls both sides in dark brown brick, metal dustbins (grey) left, a back gate centre with white chalk strokes, gravestones visible through a gap top-right. fx `rain`.
 
 #### `church_lane` - Church Lane
@@ -601,7 +618,10 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `yew, hedges, hedge, yews` -> "Old yews, black and dripping. They have been here longer than the church."
   - `cottage` -> "Edna Ashworth's. The first stroke. Boarded up now, as if the house were ashamed."
   - `windows, boards` -> "Chipboard, nailed by somebody who wanted it done quickly."
-  - `church door` -> "Oak, studded, ajar. A light inside."
+  - `church door, church` -> "Oak, studded, ajar. A light inside."
+- exits: n, sw only (TT-131: the old `in: st_judes` exit took IN / ENTER COTTAGE into the church; the cottage is Edna Ashworth's, boarded up, and not enterable).
+- `const BOARDED = "Edna Ashworth's cottage is boarded up tight, and the boards are police boards. If it's the church you want, the door is NORTH."`
+- before (TT-131): `enter` -> `[{ if: { hook: 'dobj_church' }, movePlayer: 'st_judes' }, BOARDED]` (ENTER CHURCH goes in; ENTER, ENTER COTTAGE are refused) · `go` -> `{ if: { hook: 'dir_in' }, say: BOARDED }` (IN, GO IN).
 - picture brief: lane rising between black-green yew hedges, church tower top-centre with a lit window (yellow), boarded cottage bottom-left. fx `rain`.
 
 #### `st_judes` - St Jude's
@@ -626,6 +646,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `cupboard, wine` -> "Locked. A note on it in a careful hand: NOT TO BE TOUCHED - C.A."
   - `desk` -> "A heavy desk. The register takes up most of it."
   - `lamp, green lamp` -> "A banker's lamp. Its light makes the register look like a stage."
+- before (TT-131): `open` -> `{ if: { hook: 'dobj_cupboard' }, say: "Locked, and the note says NOT TO BE TOUCHED - C.A. It is communion wine, not evidence. You leave it to the vicar." }`
 - picture brief: small room, green lamp glow centre, big open register (white pages, black lines) on a brown desk, dark cassocks hanging left. No fx.
 
 #### `churchyard` - Churchyard
@@ -662,6 +683,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `parapet, bridge, stone` -> "Worn smooth by elbows. Generations of Blackmere have leaned here and thought about jumping. Most didn't."
   - `steps` -> "Slick stone steps down to the towpath."
 - before: `jump` -> "You lean over the parapet and look at the water. It looks back. You don't." ; `swim` -> "From up here? No."
+- TT-131: scenery `towpath, path` -> "Down the steps: puddles, one bulb on a pole, and the black water beside it." · before `enter` -> `GO_TOWPATH` = `{ if: { hook: 'dobj_towpath' }, movePlayer: 'towpath' }` (GO / ENTER / WALK TO TOWPATH).
 - picture brief: stone arch spanning the picture, black water below with a single orange lamp reflection, steps descending left. fx `rain`.
 
 #### `towpath` - Towpath  (SAFE ROOM, canal)
@@ -675,6 +697,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `water, canal` -> "Black and quiet. You keep to the middle of the path."
   - `steps` -> "Worn stone, up to the bridge." (TT-105)
 - before: `swim` -> "Into November canal water? There are easier ways to catch your death, and you're trying to avoid them all tonight."
+- TT-131: scenery `towpath, path, puddles` -> "Cinders and puddles between the black water and the wall. East to the lock, west to the mill. Walter Crabtree walked it home every night for forty years." · before `enter` -> `{ if: { hook: 'dobj_towpath' }, say: "You're standing on it. East for the lock, west for the mill." }`
 - picture brief: path along the canal (black water bottom-third), single white bulb on a pole centre with a yellow halo, brown flowers at its foot, the mill as a huge black block with a chimney on the left horizon. fx `rain`, `fog`.
 
 #### `lock` - Blackmere Lock
@@ -687,6 +710,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `paddles, sluice, sluices` -> "The paddles are up a crack; water hammers through. If you went in there, you would not come out."
   - `cottage` -> "A low cottage, one lit window, smoke from the chimney."
 - hazard `lock` (§8.6): `swim`, `enter`, `jump` (with no object or with `lock_water`). The lock has deliberately **no `in` exit**: bare ENTER here is the hazard (C31), and its warning tells the player the cottage is NORTH.
+- TT-131: scenery `towpath, path` -> "West, back along the water to the bulb on its pole." · before `enter` -> `[{ if: { hook: 'dobj_cottage' }, movePlayer: 'lock_cottage' }, GO_TOWPATH]` (bare ENTER is still the `lock` hazard) · `listen` -> "The lock, roaring through the paddles. Under it, from the cottage, a radio playing to nobody. Or a man muttering numbers."
 - picture brief: two big brown lock gates converging, white churning water between (white/light-blue dither) far below, a cottage with one yellow window top-left, a shed right. fx `rain`.
 
 #### `lock_cottage` - Lock-keeper's Cottage
@@ -701,6 +725,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `coat` -> "An army greatcoat, very old. The dog's now."
   - `door` -> "A plank door, out to the lock. The roar of the water comes through it anyway." (TT-105)
   - `clocks, clock, shelves, shelf` -> "Dozens of clocks, all stopped, all at different times. 'Can't abide the ticking,' says Silas. 'Sounds like counting.'"
+- before (TT-131): `say` -> '"Eh?" Silas cups a hand to his ear, the good-eye side. "Counting man, is it?"'
 - picture brief: cosy cramped interior: orange heater glow bottom-left, rocking chair centre with an old man (grey/brown), clocks (white circles) on shelves across the top, grey dog curled bottom-right. No fx.
 
 #### `shed` - Silas's Shed
@@ -724,6 +749,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `ditch` -> "Running water. The Cortina's front wheels are in it."
   - `cortina, car, blue car, door, driver door` -> "Harrow's Cortina, J reg, Manchester tax disc. The driver's door hangs open. You could get IN."
   - `glow, town` -> "Blackmere, an orange stain in the fog below."
+- TT-131: scenery `boot, trunk` -> "Shut. Through the back window: a spare wheel and a pair of wellies." · before `open` -> `{ if: { hook: 'dobj_boot' }, say: "You lift the boot lid: spare wheel, jack, a pair of wellies. Nothing that matters. You shut it again." }` · `drive` -> "Not with its front wheels in the ditch, and not with the keys being evidence. Get IN if you want to look."
 - picture brief: dark moorland under a black sky, road (grey) diagonal from bottom-left, blue Cortina tilted into the ditch right with its door open, orange town glow bottom-left. fx `fog`.
 
 #### `harrows_car` - Harrow's Car
@@ -737,6 +763,13 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `vinyl, seat, seats, passenger seat` -> "Cold. The driver's seat is pushed right back. Frank isn't that tall."
   - `keys, ignition` -> "The keys hang in the ignition. You leave them. The car is evidence now."
   - `aerial, lead, dash` -> "The radio lead dangles loose. Not torn - pulled, by somebody who knew where it was."
+- TT-131 (blind playtest: GLOVEBOX, BOOT, DRIVE were unknown words):
+  - scenery `glovebox, glove box, glove compartment, compartment, pockets, door pockets` -> "Road atlas, a de-icer, a tin of travel sweets, a pencil chewed flat. Nothing of the case. Whatever Frank had that mattered, he took with him."
+  - scenery `boot, trunk` -> "Behind you, through the back seat: spare wheel, jack, a pair of wellies. Frank kept nothing in the boot that mattered."
+  - scenery `car, cortina, motor` -> "Frank's Cortina, nose in the ditch. You're sitting in it."
+  - before `open` -> `[{ if: { hook: 'dobj_glovebox' }, say: "You go through the glovebox and the door pockets: road atlas, a de-icer, a tin of travel sweets, a pencil chewed flat. Nothing of the case. Whatever Frank had that mattered, he took with him." }, { if: { hook: 'dobj_boot' }, say: "You lean over the back seat and look into the boot: spare wheel, jack, a pair of wellies. Nothing that matters." }]`
+  - before `listen` -> "The radio, hissing. Under the hiss, nothing - no control, no voices. Rain on the roof."
+  - before `drive` -> "The front wheels are in the ditch and the keys are evidence now. You'd only bury it deeper."
 - picture brief: interior view from the back seat: dashboard across the bottom, rain-streaked windscreen (blue/black, droplets), dangling handset centre on a curly black cord, silver handcuffs on the passenger seat right. fx `rain`.
 
 #### `tally_stone` - The Tally Stone
@@ -802,6 +835,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `gates, gate, bar, bars` -> "Wrought iron, the word ASHWORTH worked into the top in letters a foot high. Spikes."
   - `mill, windows, window, tiers` -> "Seven storeys. Hundreds of windows, all black, all looking at you."
   - `notice, demolition notice, gatepost` -> "BLACKMERE BOROUGH COUNCIL. DEMOLITION ORDER. Ashworth's Mill. Works commence 3rd December 1984. Someone has drawn four strokes across the date."
+- TT-131: scenery `towpath, path` -> "East, along the water, to the one bulb on its pole." · before `enter` -> `GO_TOWPATH` (§4.2).
 - picture brief: tall black iron gates centre with ASHWORTH lettering, chain and padlock (silver) at the join, mill silhouette behind with a chimney, a white notice on the gatepost. fx `rain`, `lightning`.
 
 #### `mill_yard` - Mill Yard  (SAFE ROOM, mill)
@@ -911,6 +945,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `bed nine, nine, 9` -> "Bed 9. Scratched into the iron of the footboard: A.P."
   - `marks, tally marks, pencil, wall` -> "Gates of five, row after row, thousands. A boy counted something here every night for four years. Near the top the rows go wrong - the fifth stroke missing, again and again. Four, four, four."
   - `drip, water, ceiling` -> "From the ceiling into a puddle. Drip. Drip. You catch yourself counting."
+- before (TT-131): `listen` -> "Drip. Drip. Drip. Drip. A pause, exactly as long as one more drip. Then it starts again."
 - picture brief (torchlit): row of iron bed frames receding left to right, the wall above one bed covered in fine grey pencil tally rows up to the ceiling, torch cone. fx `flicker`.
 
 #### `morgue` - Morgue  (dark)
@@ -925,6 +960,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `drain` -> "A brass grating. It smells of the canal."
   - `slab` -> "Porcelain. Empty. Clean. Cleaner than anything else in the building."
   - `hatch, rungs` -> `[{ if: 'morgue_hatch_found', text: 'A square hatch under the drawer, iron rungs going down into black. A cold draught comes up it, smelling of brick and canal.' }, { text: "You see no hatch." }]`
+- onEnter (TT-131: a blind tester came up from the tunnel and found the morgue's only exit was "up"): `{ if: [{ hook: 'from_tunnel' }, '!morgue_hatch_found'], setFlag: 'morgue_hatch_found', sfx: 'creak', say: "You come up the rungs through a square hatch in the floor. Above it drawer 4 has been run back into the wall on greased rails - that is why it never sat flush. The hatch is your way back DOWN." }`
 - picture brief (torchlit): wall of square steel drawer fronts (light grey, numbered in black), one drawer (4) sticking out, white tiled walls, a slab bottom-left, torch cone. fx `flicker`.
 
 ### 4.6 Beneath (2 rooms)
@@ -932,17 +968,18 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
 #### `tunnel` - Tunnel  (dark)
 - zone beneath · **dark yes** · safe no · nerve +2 · ambient (zone: heartbeat) · picture `tunnel`
 - desc variants:
-  - `{ at: ['pike', 'counting_room'] }`: "A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Steps climb south to the morgue; a ladder rises to a hatch overhead. North, the iron door stands ajar - the bar lifted from inside by someone who wants a way out."
-  - `{ turnGte: 180 }`: "A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Steps climb south to the morgue; a ladder rises to a hatch overhead. North, an iron door, shut. Behind it Harrow is praying, slower now."
-  - (default): "A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Steps climb south to the morgue; a ladder rises to a hatch overhead. North, an iron door, shut. Behind it, very faint, a man is praying."
+  - `{ at: ['pike', 'counting_room'] }`: "A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Iron rungs climb south to the morgue; a ladder rises to a hatch overhead. North, the iron door stands ajar - the bar lifted from inside by someone who wants a way out."
+  - `{ turnGte: 180 }`: "A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Iron rungs climb south to the morgue; a ladder rises to a hatch overhead. North, an iron door, shut. Behind it Harrow is praying, slower now."
+  - (default): "A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Iron rungs climb south to the morgue; a ladder rises to a hatch overhead. North, an iron door, shut. Behind it, very faint, a man is praying."
 - items here: `boiler_hatch` (via `alsoIn`).
 - onEnter: `[ { if: [{ turnGte: 180 }, { var: 'harrowFreed', eq: false }], say: "Beyond the iron door Harrow coughs - a wet, bad cough - and goes quiet for too long.", style: 'alert', then: { if: '!tunnel_music', setFlag: 'tunnel_music', music: 'dread' } }, { if: '!tunnel_music', setFlag: 'tunnel_music', music: 'dread' } ]`
 - scenery:
   - `bricks, brick, vault, walls` -> "Victorian brick, sweating. It runs under the moor for the best part of a mile."
   - `marks, tally marks, tallies` -> "Gates of five every few yards, scratched by a nail. Someone has walked this tunnel counting it, many times."
   - `iron door, door, bar, beam` -> `[{ if: { at: ['pike', 'counting_room'] }, text: 'Iron, studded, ajar. The beam that barred it has been lifted from the far side and leaned against the wall in there. Whoever went in left himself a way out.' }, { text: 'Iron, studded, shut fast. It is barred on the far side - you can hear the beam shift in its brackets when you push. Beyond it, Harrow is praying.' }]`
-  - `steps` -> "Up to the morgue."
+  - `steps, rungs` -> "Iron rungs set in the brick at the south end, up to a square hatch in the morgue floor." (TT-131: "rungs", matching the morgue's drawer hatch; the desc says "Iron rungs climb south" where it said "Steps climb south")
   - `ladder` -> "Iron rungs up to the boiler hatch."
+- before (TT-131): `knock` -> `THROUGH_THE_DOOR` (the §7.4 knock reaction, as a named const) · `say` -> `[{ if: PIKE_BELOW, say: "Your voice goes through the open door and comes back off brick. Beyond it, someone stops counting, and then starts again." }, THROUGH_THE_DOOR[1]]` (SAY / SHOUT through the door reaches Harrow like a knock) · `listen` -> `[{ if: PIKE_BELOW, say: "Through the open door: a man counting under his breath, slow and patient. And another man, breathing badly." }, { if: { turnGte: 180 }, say: "Behind the iron door Harrow is praying, slower now, losing his place. He is alive. You could KNOCK." }, "Behind the iron door, very faint, a man is praying. You know the voice: Frank Harrow. You could KNOCK."]`
 - picture brief: barrel-vaulted brick tunnel in perspective (dark red/brown, black centre), torch cone, small white tally groups on the walls, a studded iron door at the vanishing point. fx `flicker`.
 
 #### `counting_room` - The Counting Room  (dark)
@@ -963,6 +1000,7 @@ NPC. `nerve` is the room's extra per-turn delta (A8.10). Ambient "(zone)" = inhe
   - `vault, brick, bricks, ceiling` -> "Victorian brick, black with damp, low enough to touch. It gives your own breathing back to you." (TT-105)
   - `trap, ladder, rungs, bolt` -> "Iron rungs climb to a trap in the ceiling - the counting house above. Pike's door. It is bolted from this side and his padlock hangs locked through the bolt. His key, not yours." 
   - `beam, bar` -> `[{ if: { at: ['pike', 'counting_room'] }, text: 'The bar that held the iron door, leaned against the wall. Pike lifted it when he came down. His way out.' }, { text: 'The bar is in its brackets across the door.' }]`
+- before (TT-131 / TT-130): `listen` -> `[{ if: { var: 'pikeState', eq: 'counting' }, say: "Pike, counting under his breath. Harrow's breathing, wet and shallow. Your own heart.", then: HARROW_CUFFS }, "Harrow's breathing, wet and shallow. Pike's lips moving. The brick drips."]` · `say` -> `[{ if: { var: 'pikeState', eq: 'counting' }, say: "Pike tilts his head and listens to you the way he listens to the rain. Then he goes on counting.", then: HARROW_CUFFS }, { if: { var: 'pikeState', eq: 'restrained' }, say: "Pike doesn't answer. He is counting the links of the cuffs." }, '"Save your breath, kid," says Harrow.']`
 - picture brief (torchlit): brick vault, four huge white strokes on the back wall, a chained figure (Harrow: grey hair, white shirt with a dark stain) hanging beneath, a long table foreground. Pike is NOT drawn (state varies). fx `flicker`.
 
 ---
@@ -1029,7 +1067,7 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 
 **`warrant_card`** - desc: "Your warrant card. The photo makes you look like a suspect. Greater Manchester Police, CID." · personal.
 
-**`wallet`** - desc: "Your wallet. Inside: {money}, a photo you don't look at tonight, and a Barclaycard nobody in Blackmere will take." · personal.
+**`wallet`** - desc: "Your wallet. Inside: {money}, a photo you don't look at tonight, and a Barclaycard nobody in Blackmere will take." · personal. · before `open` (TT-131) -> "You thumb it open. {money}, a photo you don't look at tonight, and a Barclaycard nobody in Blackmere will take."
 
 **`torch`** - `initial`: "Someone has left a big rubber police torch on the windowsill."
 - desc: `[{ if: { on: 'torch' }, text: 'A police torch, rubber-cased, throwing a good hard beam.' }, { if: 'torch_loaded', text: 'A police torch, loaded with fresh batteries. It is switched off.' }, { text: 'A rubber-cased police torch. You shake it: dead batteries rattle inside. Someone stole the good ones.' }]`
@@ -1062,7 +1100,7 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 **`harrows_door`** - desc: "Room 3, at the top of the stairs." · `before: { open: HARROWS_DOOR, unlock: HARROWS_DOOR }` with
 `HARROWS_DOOR = [{ if: 'entered_harrows_room', say: "You left it on the latch. Just go UP." }, { if: { carried: 'room_key' }, say: "You've got Maggie's key. Just go UP." }, "Locked. Maggie keeps the keys behind the bar."]`
 
-**`whisky`** - desc: "A half-bottle of Bell's. Maggie's price, Silas's poison." · `criticalMsg`: "That's for Silas. Hang on to it." · no `drinkable` (L18): DRINK WHISKY -> criticalMsg.
+**`whisky`** - desc: "A half-bottle of Bell's. Maggie's price, Silas's poison." · `criticalMsg`: "That's for Silas. Hang on to it." · no `drinkable` (L18): DRINK WHISKY -> criticalMsg. · before `buy` (TT-131): `{ if: [{ hook: 'for_silas' }, '!heard_of_silas'], setFlag: 'heard_of_silas', continue: true }` - BUY WHISKY FOR SILAS says who it is for, which is all Maggie is waiting to hear.
 
 **`pint`** - desc: "A pint of mild, dark and flat, a thumb of foam." · `drinkable: { say: 'Flat, brown and wonderful. Your hands steady a little.', nerve: -10 }`.
 
@@ -1138,7 +1176,8 @@ Disambiguation check (L13): shared nouns among things that can meet in one scope
 · `after: { open: { sfx: 'hatch' } }` (engine also emits `door` for door items; both is fine).
 
 **`cabinet`** - desc: `[{ if: { open: 'cabinet' }, text: 'A steel cabinet marked P-R, its drawer levered open.' }, { text: 'A steel filing cabinet marked P-R. Rust has sealed every seam. You would need to lever it.' }]` · `openable: true, open: false, locked: true` (no `keyId`) · `container: {}` ·
-`before: { open: PRY_CABINET, unlock: PRY_CABINET, break: PRY_CABINET, pry: PRY_CABINET }`,
+`before: { open: PRY_CABINET, unlock: PRY_CABINET, break: PRY_CABINET, pry: PRY_CABINET, oil: OIL_CABINET }`,
+`OIL_CABINET = [{ if: { open: 'cabinet' }, say: "It's open. It doesn't need oil." }, { if: { carried: 'oil_can' }, say: "You dribble oil along the seams. The rust drinks it and gives nothing back. It isn't a stiff hinge - the whole drawer has rusted into one piece. That wants levering, not oiling." }, "Oil wouldn't shift that much rust anyway. It wants levering open."]` (TT-131: OIL CABINET with the can said "You have nothing suitable to oil the cabinet with."),
 `PRY_CABINET = [{ if: { open: 'cabinet' }, say: "It's open." }, { if: { carried: 'crowbar' }, setItem: { cabinet: { locked: false, open: true } }, sfx: 'creak', say: '(with the crowbar) You jam the claw into the seam and lean. The rust gives with a shriek and the drawer lurches out.' }, "Rusted solid. You'd need something to lever it with."]`
 
 **`patient_file`** - desc: "A manila patient file, damp-spotted: ASHCOMBE HOSPITAL - ADOLESCENT UNIT - PIKE, A. - 1971/0413." · `readable`:
@@ -1164,13 +1203,14 @@ repeated here (e.g. ASK ABOUT BUTTON -> topic `button`; ASK ABOUT SILAS -> `sila
 |---|---|
 | `t_mary` | mary, mary pike |
 | `t_counting_room` | counting room, vault, under the mill |
-| `t_counting` | counting man, counting, cape, man in a cape |
+| `t_alibi` | alibi, the 8th, eighth, last thursday, whereabouts, where were you (TT-131: moved above `t_counting`, so "last thursday" stays an alibi question) |
+| `t_counting` | counting man, counting, cape, man in a cape, thursday, thursdays (TT-131) |
 | `t_tunnel` | tunnel, passage, morgue |
+| `t_room` | harrow room, his room, room, rooms, guest room, guest rooms, room three (TT-131; only Maggie answers it) |
 | `t_door` | iron door, door, beam |
 | `t_patrol` | patrol, rounds, moor road, beat |
-| `t_alibi` | alibi, the 8th, eighth, last thursday, whereabouts, where were you |
 | `t_murders` | murders, murder, killings, killing, victims, deaths, bodies, ashworth, crabtree, holt, marsh, ivy, edna, walter, dennis |
-| `t_tally` | tally, tallyman, tally marks, strokes, tallies, debt, debts |
+| `t_tally` | tally, tallyman, tally man, tally marks, strokes, tallies, debt, debts, killer, murderer (TT-131) |
 | `t_fire` | fire, 1912, fourteen, mill girls, girls, blaze |
 | `t_mill` | mill, ashworths, counting house, demolition |
 | `t_asylum` | asylum, ashcombe, hospital, loony bin, madhouse |
@@ -1201,7 +1241,7 @@ BATTERIES works before the batteries exist in the world.)
   - `love_letters`: `{ setFlag: 'alibi_known', note: 'alibi', say: '"Oh." She sits down for the first time all night. "You\'ve been in his crypt. All right. I was with Clement on the eighth. All night. And you can keep that to yourself, Sergeant."' }`
   - `handcuffs`: `'"Put them away, love. You\'re frightening the regulars."'`
 - `sells`:
-  - `whisky: { price: 200, if: 'heard_of_silas', refuse: '"Whisky? You\'re on duty, love. Unless it\'s for somebody who needs loosening up."', text: '"For Silas, is it? He\'ll talk for a drop of this." She wraps a half-bottle of Bell\'s in a Bugle. "Two pound."' }`
+  - `whisky: { price: 200, if: 'heard_of_silas', refuse: '"Whisky? You\'re on duty, love. Unless it\'s for somebody who needs loosening up."', text: '"For Silas, is it? He\'ll talk for a drop of this." She wraps a half-bottle of Bell\'s in a Bugle and slides it across. "Two pound." You pay her, and the bottle is yours.' }` (TT-131: the last sentence; a tester had to check his inventory to see he had bought it)
   - `pint: { price: 50, if: { any: [{ moneyGte: 260 }, 'silas_told'] }, refuse: '"Not with what\'s left in your wallet, love. Keep summat back."', text: 'She pulls you a pint of mild. "Fifty pence. On the house would be bribery."' }`
   - (money invariant: until Silas has his whisky, pints and the 10p never take the balance below 200p, so the whisky can always be bought - §13.)
 - `topics`:
@@ -1227,6 +1267,8 @@ BATTERIES works before the batteries exist in the world.)
 | `t_ghost` | `'"Silas\'ll tell you all about her. I won\'t."'` |
 | `t_self` | `'"Me? Twenty years behind this bar. Widowed in \'81. Don\'t you start."'` |
 | `t_crypt` | `'"Ask the vicar." Too quickly.'` |
+| `t_room` (TT-131) | `[{ if: 'maggie_saw_card', say: '"Room three, top of the stairs. You\'ve got his key, love."' }, '"Mr Harrow\'s room? Not to just anybody. Show me something official and we\'ll see."']` |
+| `maggie` (her own names: ASK MAGGIE ABOUT MARGARET; TT-131) | `[{ if: 'letters_found', say: 'She stops polishing. "Margaret\'s my Sunday name, love. Nobody calls me it." A beat. "Nearly nobody."' }, '"Me? Twenty years behind this bar. Widowed in \'81. Don\'t you start."']` |
 
 - `default`: `'"Can\'t help you there, love."'` · `refuse`: `'"That\'s kind, love, but no."'`
 - `before.attack`: `'"Try that again and you\'re barred, Sergeant." The regulars look up for the first time.'`
@@ -1237,7 +1279,8 @@ BATTERIES works before the batteries exist in the world.)
 - `desc`: `[{ if: { var: 'pikeState', eq: 'restrained' }, text: 'Cuffed, on his knees. Without the helmet he looks very young. He is counting the links of the cuffs, over and over.' }, { if: { var: 'pikeState', eq: 'counting' }, text: 'Pike, in shirtsleeves, a long butcher\'s knife held low. His tunic hangs on the wages table, the second button missing. He does not blink.' }, { if: { found: 'ev_button' }, text: 'A big young constable, soft-spoken, older than his years. Tunic buttoned to the throat - all but the second button, which is missing. A thread hangs where it was.' }, { text: 'PC Arthur Pike: a big young constable, ruddy, soft-spoken, older than his years. Tunic buttoned to the throat, every button polished. He taps his pencil on the desk in fours.' }]`
 - `talk`: `'"Now then, Sergeant. Cup of tea? You look perished. Mr Harrow, is it? He\'ll turn up. They always turn up."'` (in the Counting Room `before.talk` handles it, below)
 - `before` (Counting Room voice - fires only there, so desk topics are untouched):
-  - `ask`, `tell`, `talk`: `[{ if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'restrained' }], say: '"I would have stopped at five," he says. "Five is a gate. You close a gate."' }, { if: { in: 'counting_room' }, pick: ['"Four," he says, not to you. "Four, and one to settle."', '"She was fourteen, Sergeant. Somebody has to keep the book."', '"Don\'t make me count you, Sergeant. You\'re not in the ledger."'] }]`
+  - `ask`, `tell`, `talk`: `[{ if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'restrained' }], say: '"I would have stopped at five," he says. "Five is a gate. You close a gate."' }, { if: { in: 'counting_room' }, pick: ['"Four," he says, not to you. "Four, and one to settle."', '"She was fourteen, Sergeant. Somebody has to keep the book."', '"Don\'t make me count you, Sergeant. You\'re not in the ledger."'], then: HARROW_CUFFS }]` (TT-130: `then: HARROW_CUFFS`, §7.3)
+  - `show`, `give` (TT-130, Counting Room only - the desk `shows` / `refuse` are untouched): `[{ if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'restrained' }], say: 'He does not look up. He is counting the links of the cuffs.' }, { if: { in: 'counting_room' }, say: 'He doesn\'t look at it. He looks at you, measuring the floor between you. "I keep my own book, Sergeant."', then: HARROW_CUFFS }]`. (GIVE of a critical item is refused by protection first: "You'd better hang on to that.")
   - `arrest` (also via `put`/`use` of the handcuffs): `ARREST_PIKE` (§7.2)
   - `attack`: `[{ if: { var: 'pikeState', eq: 'restrained' }, say: 'He is cuffed and on his knees. That isn\'t who you are.' }, { if: { var: 'pikeState', eq: 'counting' }, say: 'He is quicker with that knife than you are with your fists. Cuffs, not fists.' }, '"Steady on, Sergeant." He doesn\'t even stand up. You are suddenly very aware of how big he is.']`
 - `shows`:
@@ -1302,7 +1345,7 @@ BATTERIES works before the batteries exist in the world.)
 - `name` Silas · `names` silas, thorne, silas thorne, lock keeper, lock-keeper, keeper, old man · `proper`
 - `here`: `[{ if: 'silas_told', text: 'Silas rocks by the heater with the bottle in his lap, the whippet at his feet.' }, { text: 'Silas Thorne rocks in his chair by the heater, muttering, a whippet at his feet.' }]`
 - `desc`: "Seventy-odd, a coat tied with string, one milky eye and one very sharp one. He is counting the clocks under his breath, though none of them go."
-- `DRY = '"Dry throat, Sergeant. Can\'t talk with a dry throat. Maggie at the Black Lamb keeps a bottle of Bell\'s for me. Bring me a drop and I\'ll tell you about the counting man."'`
+- `DRY = [{ if: '!silas_dry', setFlag: 'silas_dry', say: '"Dry throat, Sergeant. Can\'t talk with a dry throat. Maggie at the Black Lamb keeps a bottle of Bell\'s for me. Bring me a drop and I\'ll tell you about the counting man."' }, '"Dry," says Silas, and licks his lips. "Black Lamb. Bell\'s. Then we\'ll talk."']` (TT-131: the full speech once, then the short of it - a tester read the whole paragraph four times; rows below spread its cases: `[..., ...DRY]`)
 - `talk`: `[{ if: 'silas_told', say: '"Told you what I know. Mind that hatch - it wants oil."' }, { say: '"Counting man, counting man, comes on a Thursday..." He breaks off and looks at you with the good eye.', then: DRY }]`
 - `accepts`: `whisky`: `SILAS_STORY` (§7.2) · `refuse`: `'"Don\'t want that. Got whisky?"'`
 - `shows`: `whisky`: `'"Well? Give it here, then."'` · `button`: `'"Bobby\'s button. The counting man wore a cape. Under a cape, who\'s to say."'` · `patient_file`: `'"Pike. Aye. They were all counters, the Pikes."'`
@@ -1312,13 +1355,16 @@ BATTERIES works before the batteries exist in the world.)
 | topic | reply after the whisky |
 |---|---|
 | `t_counting` | `'"Thursdays. Big man in a cape, like the bobbies used to wear. Counts my lock gates - one, two, three, four - goes in at the mill. Comes out up at Ashcombe an hour after, coal on him. There\'s a tunnel, see."'` |
+| `t_tally` (TT-131: ASK SILAS ABOUT TALLYMAN / KILLER) | as `t_counting` |
+| `t_murders` (TT-131) | `'"Four Thursdays, four of the old names. Counting man\'s work." He counts them off on his fingers and stops at the thumb. "He\'s not done."'` |
+| `t_mill` (TT-131) | `'"Ashworth\'s. Gates are chained, but chains cut. Counting man goes in there of a Thursday and comes out at Ashcombe. Work it out."'` |
 | `t_tunnel`, `t_counting_room` | `'"Asylum morgue to the mill, under the moor. They carried the dead down it in the cholera, to the boilers. Comes out in the Counting Room, under the counting house, where they made up the wages. There\'s a hatch in the boiler-room floor an\' all, but that wants oil. Rusted solid since the war."'` |
 | `boiler_hatch`, `oil_can` | `'"Wants oil. There\'s a can in my shed."'` |
 | `t_fire` | `'"My mam got out. Climbed through the roof glass. She said it once and never again: the doors were barred from the outside, and the bailiff stood there with the key."'` |
 | `harrow` | `'"Your mate? Never saw him. Saw a bike lamp come down off the moor about quarter past nine, going like the clappers."'` |
 | `pike` | `'"Young Arthur? Knew his gran. They were all counters, the Pikes." He looks at you with the good eye. "All of them."'` |
 | `t_mary` | `'"Mary Pike. My mam\'s pal. Fourteen. They were going to the fair on the Saturday."'` |
-| `bolt_cutters`, `t_quarry`, `crowbar` | `'"Shed\'s open - take what you need. Quarry hut\'s full of old tools an\' all. Nobody\'s worked it since \'68."'` |
+| `bolt_cutters`, `t_quarry`, `crowbar`, `shed_door` (TT-131) | `'"Shed\'s open - take what you need. Quarry hut\'s full of old tools an\' all. Nobody\'s worked it since \'68."'` |
 | `t_ghost` | `'"She\'s in the weaving shed. Don\'t talk to her. Don\'t let her talk to you."'` |
 | `maggie` | (always) `'"Maggie\'s all right. Knows everybody\'s business but her own."'` |
 | `ashdown` | (always) `'"Vicar\'s got a lady friend. Everybody knows. Nobody says."'` |
@@ -1331,7 +1377,7 @@ BATTERIES works before the batteries exist in the world.)
 - `here`: `[{ if: { var: 'harrowFreed', eq: true }, text: 'Frank Harrow sits against the wall, one hand pressed to his side.' }, { text: 'DI Frank Harrow hangs in chains from the wall, his shirt dark at the side.' }]`
 - `desc`: `[{ if: { var: 'harrowFreed', eq: true }, text: 'Frank, out of the chains, grey in the face, one hand pressed to his side. "Don\'t fuss," he says.' }, { if: { turnGte: 240 }, text: 'Frank Harrow, chained by the wrists, grey as ash. The stain at his side has spread to his knees. His eyes are open. Just.' }, { text: 'Frank Harrow, chained by the wrists to two iron rings, glasses gone, a dark stain spreading from his side. He sees you and nearly laughs. "Kid."' }]`
 - `talk`: `[{ if: { var: 'pikeState', eq: 'counting' }, say: '"Don\'t talk to me - cuff him! Cuff him, kid!"' }, { if: { var: 'harrowFreed', eq: false }, say: '"Kid. Cutters. Get me down."' }, '"I\'m all right. I\'m not all right. Later."']`
-- `before`: `free`: `CUT_CHAINS` · `cut`: `CUT_CHAINS` · `attack`: `'He\'s on your side. Mostly.'`
+- `before`: `ask`, `tell` (TT-130, `NOT_NOW` - while Pike counts and Harrow is still chained, he has one subject only): `{ if: [{ var: 'pikeState', eq: 'counting' }, { var: 'harrowFreed', eq: false }], say: [{ if: { carried: 'handcuffs' }, text: '"Not now, kid! He\'s got a knife - get the cuffs on him!"' }, { text: '"Not now, kid! Cuffs - mine are in the car, moor road. Go!"' }] }` · `free`: `CUT_CHAINS` · `cut`: `CUT_CHAINS` · `attack`: `'He\'s on your side. Mostly.'`
 - `topics`:
 
 | topic | reply |
@@ -1454,6 +1500,17 @@ const CUT_CHAINS = [
       { text: 'You get the jaws on the chain and lean - crack - and again - crack - and Frank drops onto his knees, gasping. "Behind you!" he says.' } ] },
   "They're padlocked to the rings. You'll need cutters.",
 ];
+// TT-130: while Pike counts, anything you try in the Counting Room that is not the cuffs (ACCUSE, SHOW,
+// GIVE, ASK / TELL / TALK, SAY) gets Harrow's shout. Appended with `then`; silent anywhere else.
+// `harrow_shouted` lets this turn's attack-counter warning leave Harrow out (§8.4).
+const HARROW_CUFFS = {
+  if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'counting' }], style: 'alert', setFlag: 'harrow_shouted',
+  say: [
+    { if: [{ carried: 'handcuffs' }, { var: 'attack', lte: 1 }], text: 'Behind him Harrow drags his head up. "Don\'t talk to him, kid - cuff him! Get the cuffs on him!"' },
+    { if: { carried: 'handcuffs' }, text: 'Harrow, from the wall: "Stop talking! The cuffs, kid - the cuffs!"' },
+    { text: 'Behind him Harrow drags his head up. "Don\'t talk to him, kid! Cuffs - mine are in the car, moor road. Get out and get them!"' },
+  ],
+};
 const ARREST_PIKE = [   // npcs.pike.before.arrest (A14.3, extended)
   { if: { var: 'pikeState', eq: 'restrained' }, say: 'He is going nowhere. He is counting the links of the cuffs.' },
   { if: [{ var: 'pikeState', eq: 'counting' }, { carried: 'handcuffs' }], sfx: 'chain', setVar: { pikeState: 'restrained' }, award: 'arrest', say: [
@@ -1491,9 +1548,22 @@ verbs: [
   { id: 'open', patterns: ['open {dobj} with {iobj}'] },        // tool phrasing; content before.open decides
   { id: 'call', notHere: "You'll need a phone. There's a box in Market Square." },
   { id: 'free', words: ['unshackle'] },
+  { id: 'arrest', words: ['subdue', 'tackle', 'apprehend', 'disarm', 'overpower', 'nick'] },   // TT-130
   { id: 'cut', words: ['crop'] },
+  // TT-131 (blind playtest: SAY FIVE, BREATHE, DRIVE, BUY WHISKY FOR SILAS, GO TOWPATH were refused)
+  { id: 'say', words: ['say', 'shout', 'yell', 'call out', 'whisper', 'cry'], patterns: ['say', 'say {topic}'],
+    default: "You say it out loud. The rain goes on as if you hadn't." },
+  { id: 'breathe', words: ['breathe'], patterns: ['breathe', 'breathe deeply|slowly|deep|in|out'],
+    default: 'In for four, out for four. You catch yourself counting, and stop.' },
+  { id: 'drive', words: ['drive'], patterns: ['drive', 'drive {dobj}', 'drive off|away'],
+    default: 'You came on the train, and the last one has gone.' },
+  { id: 'buy', patterns: ['buy {dobj} for {topic}'] },                      // whisky.before.buy (§5.2)
+  { id: 'enter', patterns: ['go|walk|head|run to {dobj}', 'go|walk|head|run {dobj}'] },   // GO TO X = ENTER X
 ],
 ```
+SAY is answered by the rooms where someone can hear it: `police_house`, `black_lamb`, `lock_cottage`,
+`tunnel` (Harrow, like a knock), `counting_room` (§4). DRIVE by `harrows_car` and `moor_road`. ENTER / GO TO by `canal_bridge`,
+`towpath`, `lock`, `mill_gates` (towpath), `lock` (cottage) and `church_lane` (church / cottage).
 Room-level uses: `st_judes.before.pray` -> `{ nerve: -5, say: 'You sit in a box pew and close your eyes. When you open them the candles are still burning. Four of them. It helps, a little.' }`;
 `tunnel.before.knock` -> `[{ if: { at: ['pike', 'counting_room'] }, say: 'The door swings at your knock. It is not barred any more.' }, { say: 'Harrow stops praying. "Kid? Is that you? The bar\'s on this side and I can\'t reach it. He comes and goes by the trap up top. Find another way - and hurry."', setFlag: 'heard_harrow' }]`.
 
@@ -1527,9 +1597,21 @@ evidence: {
 `entered_harrows_room`, `phoned`, `alibi_known`, `letters_found`, `silas_told`, `shed_open`, `found_car`,
 `climbed_down`, `torch_off_warned`, `dark_warned`, `mill_chain_cut`, `entered_mill`, `saw_girl`, `heard_praying`, `heard_harrow`, `hatch_oiled`,
 `ward_counting`, `morgue_hatch_found`, `tunnel_music`, `pike_greeted`, `pike_fled`, `accused_maggie`, `accused_ashdown`,
-`accused_silas`. (`torch_off_warned`: the TURN OFF refusal, §5.2; `pike_fled`: the ACCUSE that makes him run, §8.1 - TT-105.)
+`accused_silas`, `harrow_shouted`, `silas_dry`. (`silas_dry`: Silas's long "Dry throat" speech has been given, §6.5 - TT-131. `harrow_shouted`: set by `HARROW_CUFFS`, cleared by the `harrow_quiet` daemon the same turn, §8.4 - TT-130. `torch_off_warned`: the TURN OFF refusal, §5.2; `pike_fled`: the ACCUSE that makes him run, §8.1 - TT-105.)
 
 **Vars** (A3.2/A14.3, exactly): `pikeState`, `pikeArrivalTurn`, `attack`, `harrowFreed`. No extra vars.
+
+### 7.6 Hooks (`content.hooks`, A5) - TT-131
+The data language cannot see *which* scenery entry a command names, or what a purchase is for. These
+few pure hooks (`src/content/hooks.js`) can; everything else stays data.
+
+| hook | phase | true when / does |
+|---|---|---|
+| `read_scenery` | reaction | READ of a room scenery entry says its desc (or "It's too dark to read."); returns false for anything else so READ <item> runs as before. Every room with scenery gets `before.read: { hook: 'read_scenery' }` (index.js). (A tester: READ NOTICE said "There's nothing written on the notice.") |
+| `for_silas` | cond | the BUY topic is Silas (`silas`, `t_keeper`, `t_counting`) |
+| `dobj_towpath`, `dobj_church`, `dobj_cottage`, `dobj_boot`, `dobj_glovebox`, `dobj_cupboard`, `dobj_coalhole` | cond | the dobj is a scenery entry named `towpath` / `church door` / `cottage` / `boot` / `glovebox` / `cupboard` / `coal-hole` |
+| `dir_in` | cond | the command's direction is `in` |
+| `from_tunnel` | cond | `prevRoomId` is `tunnel` |
 
 ---
 
@@ -1545,11 +1627,11 @@ case: {
     { if: { in: 'police_house' }, sfx: 'sting', award: 'accusation', move: { pike: null }, setFlag: 'pike_fled',
       setVar: { pikeState: 'fled', pikeArrivalTurn: { turnPlus: 5 } },
       say: '"Arthur Pike, I am arresting you for the murders of Edna Ashworth, Walter Crabtree, Dennis Holt and Ivy Marsh -" He stands. He is very big. For a moment his face is quite empty, a slate wiped clean. Then he puts both hands on the counter and vaults it, and his shoulder takes you into the wall. By the time you are up, the door is banging in the wind and he is gone into the rain without his helmet. You know where. Under the mill. To Frank.' },
-    { award: 'accusation',
+    { award: 'accusation', then: HARROW_CUFFS,   // TT-130
       say: 'You say it out loud: the whole caution, every name. Pike listens with his head on one side, counting the names off on his fingers. "Four," he says. "You forgot one."' },
   ],
   weak: [
-    { if: { in: 'counting_room' }, nerve: 15, say: '"Prove it," says Pike, and smiles, and goes on counting.' },
+    { if: { in: 'counting_room' }, nerve: 15, say: '"Prove it," says Pike, and smiles, and goes on counting.', then: HARROW_CUFFS },
     { nerve: 15, say: 'Pike laughs - a big easy laugh with nothing behind it. "Me? On what, Sergeant? A feeling?" He leans across the counter. "Come back when you\'ve got something you can count."' },
   ],
   wrong: [
@@ -1568,6 +1650,10 @@ Pike present with evidence >= 3 -> `correct` (1 turn; `award` is once-only, so a
 accusation in the Counting Room just says its text). Evidence < 3 -> `weak` (1 turn, may retry).
 Suspect present -> confirmation (free); YES -> `wrong` (1 turn, ending); NO / anything else ->
 `cancelText`, no turn. Evidence count = facts found + evidence items *carried now* (A8.8).
+**Finale fairness (TT-130).** ACCUSE in the Counting Room never arrests anyone - the caution is words,
+and Pike has a knife. Strong or weak, it is answered by Harrow's shout (`HARROW_CUFFS`, §7.3) pointing
+at the cuffs (or, without them, back out to the car). The blind playtest showed players reading HELP's
+ACCUSE as the way to win; HELP now names ARREST / HANDCUFF too (§1.7).
 
 ### 8.2 Pike's state machine (`vars.pikeState`)
 ```
@@ -1628,19 +1714,32 @@ daemons: [
       setVar: { attack: { add: 1 } },
       then: [
         { if: [{ lit: true },  { var: 'attack', gte: 5 }], sfx: 'scream', end: 'death_pike' },
-        { if: [{ lit: true },  { var: 'attack', eq: 4 }], style: 'alert', nerve: 20, sfx: 'sting',
-          say: 'He lunges. The knife opens your sleeve and the arm under it, and you feel nothing at all, which frightens you more. "Four," he says. Next time it will not be your arm.' },
-        { if: [{ lit: true },  { var: 'attack', eq: 3 }], style: 'alert',
-          say: '"Three," says Pike, and takes a step closer. Behind him Harrow is trying to say something. Do something.' },
-        { if: [{ lit: true },  { var: 'attack', eq: 2 }], style: 'alert',
-          say: 'He circles, knife low. "One," he says, matching your steps. "Two."' },
+        // TT-130: each lit warning carries Harrow's pointer (cuffs, or the way out) unless he has
+        // just shouted it in answer to this turn's command (HARROW_CUFFS sets `harrow_shouted`).
+        { if: [{ lit: true },  { var: 'attack', eq: 4 }], style: 'alert', nerve: 20, sfx: 'sting', say: [
+            { if: 'harrow_shouted', text: LUNGE },
+            { if: { carried: 'handcuffs' }, text: 'He lunges. The knife opens your sleeve and the arm under it, and you feel nothing at all, which frightens you more. "Four," he says. Next time it will not be your arm. Harrow is shouting now: "The cuffs, kid! NOW!"' },
+            { text: 'He lunges. The knife opens your sleeve and the arm under it, and you feel nothing at all, which frightens you more. "Four," he says. Next time it will not be your arm. Harrow is shouting now: "Get out, kid! OUT!"' } ] },
+        { if: [{ lit: true },  { var: 'attack', eq: 3 }], style: 'alert', say: [
+            { if: 'harrow_shouted', text: '"Three," says Pike, and takes a step closer.' },
+            { if: { carried: 'handcuffs' }, text: '"Three," says Pike, and takes a step closer. Behind him Harrow gets the words out at last: "Cuff him, kid! The cuffs!"' },
+            { text: '"Three," says Pike, and takes a step closer. Behind him Harrow gets the words out at last: "Get out, kid! Cuffs - my car!"' } ] },
+        { if: [{ lit: true },  { var: 'attack', eq: 2 }], style: 'alert', say: [
+            { if: 'harrow_shouted', text: CIRCLES },
+            { if: { carried: 'handcuffs' }, text: 'He circles, knife low. "One," he says, matching your steps. "Two." Harrow, hoarse: "Cuffs, kid!"' },
+            { text: 'He circles, knife low. "One," he says, matching your steps. "Two." Harrow, hoarse: "No cuffs? Then get out, kid!"' } ] },
         { if: [{ lit: false }, { var: 'attack', gte: 2 }, 'dark_warned'], sfx: 'scream', end: 'death_pike' },
         { if: { lit: false }, setFlag: 'dark_warned', style: 'alert',
           say: 'In the dark the counting is suddenly very close. "One..." Light. You need light, now.' },
       ] } },
+  { id: 'harrow_quiet', run: { if: 'harrow_shouted', clearFlag: 'harrow_shouted' } },   // TT-130: the shout lasts one turn
 ],
+// const CIRCLES = 'He circles, knife low. "One," he says, matching your steps. "Two."';
+// const LUNGE = 'He lunges. The knife opens your sleeve and the arm under it, and you feel nothing at all, which frightens you more. "Four," he says. Next time it will not be your arm.';
 ```
-Warnings before death (fairness): lit - 2 ("He circles, knife low"), 3, 4 (lunge); dark - 1, or
+(Before TT-130 the 3 warning read: '"Three," says Pike, and takes a step closer. Behind him Harrow is trying to say something. Do something.' Both blind testers died after it without thinking of the cuffs.)
+Warnings before death (fairness): lit - 2 ("He circles, knife low"), 3, 4 (lunge), each naming the cuffs
+(or, without them, the way out) - TT-130; dark - 1, or
 the TURN OFF TORCH refusal followed by a deliberate second TURN OFF. The dark branch is fatal only
 once `dark_warned` is set (PLAN "dark: warning at 1, fatal at 2"), and only two things set it: the
 "One..." warning itself, and the second TURN OFF in here after the refusal (§5.2 `TORCH_OFF_WARNING`;
@@ -1758,8 +1857,14 @@ beats: [
       'Under the rain, under everything, a voice is counting. It is nearer than it was.',
       'You find you are counting your own steps. You make yourself stop.',
       'A smell of scorched cotton, from nowhere, and gone.' ] } },
-  { id: 'torch_flicker', every: 7, when: [{ turnGte: 180 }, { carried: 'torch' }, { on: 'torch' }],
-    run: { chance: 0.5, say: 'Your torch flickers, browns out, and steadies again.' } },     // cosmetic only (PLAN §2.2 #1)
+  // cosmetic only (PLAN §2.2 #1). TT-131: three once-beats, spaced, the third paying it off (the old
+  // `every: 7, chance: 0.5` beat fired about twelve times for a blind tester and never meant anything).
+  { id: 'torch_flicker', when: [{ turnGte: 185 }, { carried: 'torch' }, { on: 'torch' }],
+    run: { say: 'Your torch flickers, browns out, and steadies again.' } },
+  { id: 'torch_flicker_2', when: [{ turnGte: 225 }, { carried: 'torch' }, { on: 'torch' }],
+    run: { say: 'The torch browns out again, and comes back when you shake it. Fresh batteries. It should not be doing that.' } },
+  { id: 'torch_flicker_3', when: [{ turnGte: 262 }, { carried: 'torch' }, { on: 'torch' }],
+    run: { say: 'The beam jumps, and jumps again - and you see it is not the torch. It is your hand. You hold it still with the other one.' } },
   { id: 'fog_figure', when: [{ in: 'tally_stone' }, { turnGte: 30 }],                    // once
     run: { sfx: 'sting', nerve: 10, say: 'For a moment a figure stands in the fog beyond the stone - tall, quite still, a cape on its shoulders. Then there is only fog.' } },
   { id: 'towpath_steps', when: [{ in: 'towpath' }, { turnGte: 60 }],                     // once
@@ -1782,6 +1887,7 @@ used only via `chance`/`pick` (deterministic per seed).
 | D3, turn 240, `pikeState: 'desk'` | Pike leaves (`left`), `pikeArrivalTurn = 250` | `leaveText` (player in Police House) |
 | D4 every turn | `pike_arrives`: `fled`/`left` and turn >= arrival -> `counting_room`, `counting` | flavour in `counting_house` (sfx `hatch`) / `tunnel` (sfx `door`) |
 | D4 every turn | `attack` counter (§8.4) | texts at 2/3/4, death at 5; dark 1/2 |
+| D4 every turn | `harrow_quiet` (§8.4, TT-130): clears `harrow_shouted` | - |
 | `tunnel.onEnter` | first entry starts music `dread`; after 23:00 Harrow's cough | §4.6 |
 | `counting_room.onEnter` | Pike's greeting (once), re-entry line, bleed cue | §8.4 |
 | `weaving_shed.onEnter` (lit, once) | the mill girl | sfx `whisper`, nerve +10 |
@@ -1796,6 +1902,7 @@ No `afterAction` reactions are needed.
 
 | # | id | `done` | tier 1 | tier 2 | tier 3 |
 |---|---|---|---|---|---|
+| 0 | `showdown` (TT-130) | `{ not: [{ in: 'counting_room' }, { any: [{ var: 'pikeState', eq: 'counting' }, { var: 'harrowFreed', eq: false }] }] }` | one tier, Text variants: Pike counting + cuffs carried + Harrow freed: "No more talking. HANDCUFF PIKE, now." · counting + cuffs: "No more talking. HANDCUFF PIKE, now. Then CUT CHAINS to get Frank down." · counting, no cuffs: "You've nothing to hold him with. Go SOUTH - his count waits while you're gone - and fetch Frank's handcuffs from the Cortina on the moor road." · Pike cuffed + cutters carried: "Pike is cuffed. CUT CHAINS to get Frank down." · else: "Pike is cuffed. Frank's chains want cutters: Silas's bolt cutters, from the shed by the lock." | - | - |
 | 1 | `light` | `{ awarded: 'torch_lit' }` | "You won't get far in Blackmere without a light. There's a torch on the waiting-room windowsill, but its batteries are dead." | "Maggie at the Black Lamb has batteries. She helps police officers - once she knows you are one." | "TAKE TORCH in the waiting room. In the Black Lamb: SHOW CARD TO MAGGIE, PUT BATTERIES IN TORCH, TURN ON TORCH." |
 | 2 | `room` | `{ awarded: 'harrows_room' }` | "Frank was staying at the Black Lamb. His things might tell you what he knew." | "Maggie keeps the room keys behind the bar." | "Get the key by showing Maggie your card, then go UP. OPEN SUITCASE, READ MAP, READ NOTES." |
 | 3 | `silas` | `{ awarded: 'silas_story' }` | "Frank marked someone at the canal lock as a witness." | "Silas Thorne, the lock-keeper, talks for a drink. Maggie sells whisky - once she knows who it's for." | "ASK MAGGIE ABOUT SILAS, BUY WHISKY. Then Station Road, EAST, DOWN, EAST, NORTH: GIVE WHISKY TO SILAS." |
@@ -1812,6 +1919,8 @@ No `afterAction` reactions are needed.
 | 14 | `free` | `{ var: 'harrowFreed', eq: true }` | "Frank is chained to the wall." | "Silas's bolt cutters." | "CUT CHAINS (carrying the bolt cutters)." |
 
 All steps done -> "You have everything you need. Finish it." (engine default, no cost).
+Step 0 comes first so that, in the Counting Room, HINT answers the only question that matters even when
+earlier steps (register, button...) are still undone - blind tester B's in-fight hint was "You haven't long" (TT-130).
 Steps 2, 9 are on the path for *fairness* (pointers), not strict necessity; both are reachable early,
 so the first-unmet rule never nags about something impossible.
 

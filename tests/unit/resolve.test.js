@@ -639,3 +639,48 @@ test('property: random token soups in random rooms never throw and return a well
   }
   assert.ok(seen.ok > 100 && seen.pending > 20 && seen.error > 100, JSON.stringify(seen));
 });
+
+/* TT-131 — a person beats things named after them (blind playtest: ASK HARROW ABOUT PIKE asked
+ * "the room key, the map or the Harrow's notes?"; ACCUSE PIKE with Pike away said "You can only
+ * accuse a person" because the patient file has the adjective `pike`). */
+const named = {
+  ...mini,
+  items: {
+    ...mini.items,
+    f_key: { name: "Frank's key", names: ['key'], adjectives: ['frank'], location: 'player', desc: 'His.' },
+    f_map: { name: "Frank's map", names: ['map'], adjectives: ['frank'], location: 'player', desc: 'His.' },
+  },
+  npcs: { ...mini.npcs, frank: { name: 'Frank', names: ['frank', 'inspector'], proper: true, location: null, desc: 'Him.' } },
+};
+const namedVocab = buildVocab(named);
+const RN = (s, line) => R(s, line, named, namedVocab);
+
+test('TT-131: an absent person\'s name never binds to things named after them', () => {
+  const s = createState(named, 1);
+  const r = RN(s, 'ask frank about key');
+  assert.equal(r.ok, false);
+  assert.equal(r.text, "Frank isn't here.");
+  assert.equal(RN(s, 'x frank').text, "Frank isn't here.");
+  // The things are still reachable by their own nouns, with the adjective.
+  assert.equal(RN(s, 'x frank key').command.dobj, 'f_key');
+  assert.equal(RN(s, 'x frank map').command.dobj, 'f_map');
+  // A non-name word of the NPC ("inspector") says the plain notHere.
+  assert.equal(RN(s, 'x inspector').message, 'notHere');
+  assert.equal(RN(s, 'x inspector').text, undefined);
+});
+
+test('TT-131: with the person here, the name binds to the person, not the things', () => {
+  const s = createState(named, 1);
+  s.npcs.frank.loc = s.roomId;
+  assert.equal(RN(s, 'ask frank about key').command.dobj, 'frank');
+  assert.equal(RN(s, 'show key to frank').command.iobj, 'frank');
+  assert.equal(RN(s, 'give map to frank').command.iobj, 'frank');
+});
+
+test('TT-131: a verb\'s own notHere still wins (ACCUSE)', () => {
+  const content = { ...named, verbs: [{ id: 'accuse', notHere: 'Accuse who?' }] };
+  const v = buildVocab(content);
+  const s = createState(content, 1);
+  const r = R(s, 'accuse frank', content, v);
+  assert.equal(r.text, 'Accuse who?');
+});

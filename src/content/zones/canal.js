@@ -11,6 +11,9 @@ const SHED = [
   "It's Silas's padlock on Silas's shed. Ask Silas.",
 ];
 
+/** GO / ENTER TOWPATH from a room next to it (TT-131). */
+const GO_TOWPATH = { if: { hook: 'dobj_towpath' }, movePlayer: 'towpath' };
+
 const OIL_USE = [
   { if: { present: 'boiler_hatch' }, then: OIL_HATCH },
   "You'd waste it. Save it for something rusty.",
@@ -30,8 +33,10 @@ export const rooms = {
       { names: ['water', 'canal'], desc: "Black. Still. It doesn't reflect the lamps so much as swallow them." },
       { names: ['parapet', 'bridge', 'stone'], desc: "Worn smooth by elbows. Generations of Blackmere have leaned here and thought about jumping. Most didn't." },
       { names: ['steps'], desc: 'Slick stone steps down to the towpath.' },
+      { names: ['towpath', 'path'], desc: 'Down the steps: puddles, one bulb on a pole, and the black water beside it.' }, // TT-131
     ],
     before: {
+      enter: GO_TOWPATH, // TT-131: GO / ENTER TOWPATH
       jump: "You lean over the parapet and look at the water. It looks back. You don't.",
       swim: 'From up here? No.',
     },
@@ -48,8 +53,11 @@ export const rooms = {
       { names: ['mill'], desc: "Ashworth's Mill. Seven storeys of black. A chimney like a finger raised for silence." },
       { names: ['water', 'canal'], desc: 'Black and quiet. You keep to the middle of the path.' },
       { names: ['steps'], desc: 'Worn stone, up to the bridge.' },
+      // TT-131: the room's own name is examinable.
+      { names: ['towpath', 'path', 'puddles'], desc: 'Cinders and puddles between the black water and the wall. East to the lock, west to the mill. Walter Crabtree walked it home every night for forty years.' },
     ],
     before: {
+      enter: { if: { hook: 'dobj_towpath' }, say: "You're standing on it. East for the lock, west for the mill." },
       swim: "Into November canal water? There are easier ways to catch your death, and you're trying to avoid them all tonight.",
     },
   },
@@ -68,7 +76,13 @@ export const rooms = {
       { names: ['gates', 'lock gates', 'beams', 'balance beams'], desc: 'Oak gates, black with age, iron-banded. The balance beams are worn smooth where men pushed them for two hundred years.' },
       { names: ['paddles', 'sluice', 'sluices'], desc: 'The paddles are up a crack; water hammers through. If you went in there, you would not come out.' },
       { names: ['cottage'], desc: 'A low cottage, one lit window, smoke from the chimney.' },
+      { names: ['towpath', 'path'], desc: 'West, back along the water to the bulb on its pole.' }, // TT-131
     ],
+    before: {
+      // TT-131: ENTER COTTAGE / ENTER TOWPATH (bare ENTER is still the `lock` hazard, C31).
+      enter: [{ if: { hook: 'dobj_cottage' }, movePlayer: 'lock_cottage' }, GO_TOWPATH],
+      listen: 'The lock, roaring through the paddles. Under it, from the cottage, a radio playing to nobody. Or a man muttering numbers.',
+    },
   },
 
   lock_cottage: {
@@ -85,6 +99,7 @@ export const rooms = {
     ],
     // Silent: meeting Silas counts as having heard of him, so Maggie will sell whisky.
     onEnter: { setFlag: 'heard_of_silas' },
+    before: { say: '"Eh?" Silas cups a hand to his ear, the good-eye side. "Counting man, is it?"' }, // TT-131
   },
 
   shed: {

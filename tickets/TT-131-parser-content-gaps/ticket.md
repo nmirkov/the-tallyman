@@ -2,7 +2,7 @@
 id: TT-131
 title: Parser and content gaps from the blind playtest
 milestone: BUG
-status: in-progress
+status: done
 agent: writer
 model: opus
 depends: [TT-024]

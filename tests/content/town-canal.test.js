@@ -76,7 +76,7 @@ describe('bundle', () => {
     const awards = Object.values(content.scoring.awards);
     assert.equal(awards.length, 13);
     assert.equal(awards.reduce((n, a) => n + a.points, 0), 100);
-    assert.equal(FLAGS.length, 28); // TT-105: + torch_off_warned, pike_fled
+    assert.equal(FLAGS.length, 30); // TT-105: + torch_off_warned, pike_fled; TT-130: + harrow_shouted; TT-131: + silas_dry
   });
 
   test('every prose string is verbatim from STORY.md', () => {
@@ -437,7 +437,8 @@ describe('gates and refusals', () => {
     const g = game();
     at(g, 'lock_cottage');
     assert.match(say(g, 'talk to silas'), /^"Counting man, counting man, comes on a Thursday\.\.\."[^\n]*\n"Dry throat, Sergeant\./);
-    assert.match(say(g, 'ask silas about the tunnel'), /^"Dry throat, Sergeant\./);
+    // TT-131: the full speech once, then the short of it.
+    assert.equal(say(g, 'ask silas about the tunnel'), '"Dry," says Silas, and licks his lips. "Black Lamb. Bell\'s. Then we\'ll talk."');
     assert.equal(say(g, 'ask silas about maggie'), '"Maggie\'s all right. Knows everybody\'s business but her own."');
     at(g, 'lock_cottage', (s) => { s.flags.silas_told = true; });
     assert.match(say(g, 'ask silas about the tunnel'), /^"Asylum morgue to the mill, under the moor\./);

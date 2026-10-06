@@ -485,7 +485,7 @@ table('errors', [
   ['brass key', { error: 'no-verb', word: 'brass' }],
   ['about', { error: 'no-verb', word: 'about' }],
   ['put', { error: 'missing-noun', verb: 'put', verbWord: 'put' }],
-  ['x', { error: 'missing-noun', verb: 'examine', verbWord: 'x' }],
+  ['x', { error: 'missing-noun', verb: 'examine', verbWord: 'x', verbName: 'examine' }], // TT-131
   ['look at', { error: 'missing-noun', verb: 'examine', verbWord: 'look at' }],
   ['pick up', { error: 'missing-noun', verb: 'take', verbWord: 'pick up' }],
   ['pick', { error: 'missing-noun', verb: 'take', verbWord: 'pick' }],
@@ -529,7 +529,7 @@ describe('parseCommand input handling', () => {
  *  Output shape (acceptance 1)                                        *
  * ------------------------------------------------------------------ */
 const CMD_KEYS = new Set(['verb', 'verbWord', 'dobj', 'prep', 'iobj', 'dir', 'topic', 'arg', 'raw']);
-const ERR_KEYS = new Set(['error', 'word', 'verb', 'verbWord', 'raw']);
+const ERR_KEYS = new Set(['error', 'word', 'verb', 'verbWord', 'verbName', 'raw']); // verbName: TT-131
 const PREP_IDS = new Set([...Object.keys(PREPOSITIONS), 'over']);
 function assertPhrase(p, where) {
   assert.ok(p && typeof p === 'object', `${where} is an object`);

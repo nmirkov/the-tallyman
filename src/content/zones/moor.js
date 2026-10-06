@@ -27,8 +27,13 @@ export const rooms = {
       { names: ['heather', 'peat'], desc: 'Black and sodden. It would take a footprint and keep it a week.' },
       { names: ['ditch'], desc: "Running water. The Cortina's front wheels are in it." },
       { names: ['cortina', 'car', 'blue car', 'door', 'driver door'], desc: "Harrow's Cortina, J reg, Manchester tax disc. The driver's door hangs open. You could get IN." },
+      { names: ['boot', 'trunk'], desc: 'Shut. Through the back window: a spare wheel and a pair of wellies.' }, // TT-131
       { names: ['glow', 'town'], desc: 'Blackmere, an orange stain in the fog below.' },
     ],
+    before: {
+      open: { if: { hook: 'dobj_boot' }, say: 'You lift the boot lid: spare wheel, jack, a pair of wellies. Nothing that matters. You shut it again.' }, // TT-131
+      drive: 'Not with its front wheels in the ditch, and not with the keys being evidence. Get IN if you want to look.',
+    },
   },
 
   harrows_car: {
@@ -41,7 +46,19 @@ export const rooms = {
       { names: ['vinyl', 'seat', 'seats', 'passenger seat'], desc: "Cold. The driver's seat is pushed right back. Frank isn't that tall." },
       { names: ['keys', 'ignition'], desc: 'The keys hang in the ignition. You leave them. The car is evidence now.' },
       { names: ['aerial', 'lead', 'dash'], desc: 'The radio lead dangles loose. Not torn - pulled, by somebody who knew where it was.' },
+      // TT-131: what a detective checks in a car.
+      { names: ['glovebox', 'glove box', 'glove compartment', 'compartment', 'pockets', 'door pockets'], desc: 'Road atlas, a de-icer, a tin of travel sweets, a pencil chewed flat. Nothing of the case. Whatever Frank had that mattered, he took with him.' },
+      { names: ['boot', 'trunk'], desc: 'Behind you, through the back seat: spare wheel, jack, a pair of wellies. Frank kept nothing in the boot that mattered.' },
+      { names: ['car', 'cortina', 'motor'], desc: "Frank's Cortina, nose in the ditch. You're sitting in it." },
     ],
+    before: {
+      open: [
+        { if: { hook: 'dobj_glovebox' }, say: 'You go through the glovebox and the door pockets: road atlas, a de-icer, a tin of travel sweets, a pencil chewed flat. Nothing of the case. Whatever Frank had that mattered, he took with him.' },
+        { if: { hook: 'dobj_boot' }, say: 'You lean over the back seat and look into the boot: spare wheel, jack, a pair of wellies. Nothing that matters.' },
+      ],
+      listen: 'The radio, hissing. Under the hiss, nothing - no control, no voices. Rain on the roof.',
+      drive: "The front wheels are in the ditch and the keys are evidence now. You'd only bury it deeper.",
+    },
     onEnter: { if: '!found_car', setFlag: 'found_car', award: 'car_found', say: 'The keys are still in the ignition. Frank never leaves his keys.' },
   },
 

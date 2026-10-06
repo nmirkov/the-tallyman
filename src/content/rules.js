@@ -69,10 +69,16 @@ export const zones = {
   },
 };
 
+/** Engine message overrides (A16; STORY §1.8). TT-131: the blind testers' flat refusals. */
+export const messages = {
+  fixed: 'You leave it where it is.',
+  allNotAllowed: 'One thing at a time, Sergeant.',
+};
+
 /** STORY §1.7 (`help`). */
 export const help = [
   'Type short commands: GO NORTH (or N), EXAMINE LEDGER (X LEDGER), TAKE TORCH, SEARCH, READ NOTE, OPEN CABINET, ASK MAGGIE ABOUT SILAS, SHOW CARD TO MAGGIE, GIVE WHISKY TO SILAS, CALL HQ.',
   'Useful: LOOK (L), INVENTORY (I), NOTES (your case notebook), TIME, SCORE, HINT (costs 2 points), WAIT (Z), AGAIN (G), UNDO, SAVE 1-3, LOAD 1-3, EXPORT, IMPORT, RESTART.',
   'Chain commands with THEN or a full stop: TAKE TORCH. W THEN SEARCH.',
-  "When you know who it is, ACCUSE them - you'll want at least three pieces of evidence on you. Each command takes thirty seconds. Midnight is turn 300.",
+  "When you know who it is, ACCUSE them - you'll want at least three pieces of evidence on you. Words won't hold a killer, though: to take one in, ARREST or HANDCUFF them, and you'll need cuffs. Each command takes thirty seconds. Midnight is turn 300.",
 ].join('\n\n');

@@ -12,10 +12,11 @@
 //   endings.js     endings                                               STORY §8.7
 //   beats.js       scripted beats and story daemons                      STORY §8.4, §9
 //   hints.js       hint steps                                            STORY §10
+//   hooks.js       the few command-aware rules data can't express        STORY §7.6
 //   art/index.js   pictures - owned by the artist tickets (TT-019...TT-021); static import
 //                  so the single-file esbuild (iife) bundle needs no top-level await
 
-import { meta, rules, zones, help } from './rules.js';
+import { meta, rules, zones, help, messages } from './rules.js';
 import { evidence, notes, vars, scoring } from './registries.js';
 import { topics } from './topics.js';
 import { verbs } from './verbs.js';
@@ -23,6 +24,7 @@ import { caseDef, hazards } from './case.js';
 import { endings } from './endings.js';
 import { beats, daemons } from './beats.js';
 import { hints } from './hints.js';
+import { hooks } from './hooks.js';
 import * as town from './zones/town.js';
 import * as canal from './zones/canal.js';
 import * as moor from './zones/moor.js';
@@ -64,12 +66,23 @@ function orderedItems() {
   return Object.fromEntries(ITEM_ORDER.filter((id) => Object.hasOwn(all, id)).map((id) => [id, all[id]]));
 }
 
+/** READ <scenery> = what EXAMINE says (TT-131, STORY §7.6); rooms keep their own READ if any. */
+const READ_SCENERY = { hook: 'read_scenery' };
+
+/** Every room with scenery gets `before.read` = READ_SCENERY (new objects; the modules stay as written). */
+function withSceneryReading(rooms) {
+  return Object.fromEntries(Object.entries(rooms).map(([id, room]) => {
+    if (!Array.isArray(room.scenery) || !room.scenery.length || room.before?.read !== undefined) return [id, room];
+    return [id, { ...room, before: { ...room.before, read: READ_SCENERY } }];
+  }));
+}
+
 /** @type {import('../engine/types.js').ContentBundle} */
 export const content = {
   meta,
   rules,
   zones,
-  rooms: Object.assign({}, ...ZONE_MODULES.map((z) => z.rooms)),
+  rooms: withSceneryReading(Object.assign({}, ...ZONE_MODULES.map((z) => z.rooms))),
   items: orderedItems(),
   npcs: { maggie, pike, ashdown, silas, harrow },
   topics,
@@ -84,7 +97,9 @@ export const content = {
   hazards,
   case: caseDef,
   verbs,
+  messages,
   help,
+  hooks,
   art,
 };
 

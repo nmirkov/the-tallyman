@@ -36,7 +36,9 @@ export const rooms = {
       { names: ['gates', 'gate', 'bar', 'bars'], desc: 'Wrought iron, the word ASHWORTH worked into the top in letters a foot high. Spikes.' },
       { names: ['mill', 'windows', 'window', 'tiers'], desc: 'Seven storeys. Hundreds of windows, all black, all looking at you.' },
       { names: ['notice', 'demolition notice', 'gatepost'], desc: "BLACKMERE BOROUGH COUNCIL. DEMOLITION ORDER. Ashworth's Mill. Works commence 3rd December 1984. Someone has drawn four strokes across the date." },
+      { names: ['towpath', 'path'], desc: 'East, along the water, to the one bulb on its pole.' }, // TT-131
     ],
+    before: { enter: { if: { hook: 'dobj_towpath' }, movePlayer: 'towpath' } }, // TT-131: GO / ENTER TOWPATH
   },
 
   mill_yard: {

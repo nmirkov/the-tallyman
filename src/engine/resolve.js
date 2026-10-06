@@ -221,11 +221,45 @@ function phraseWords(np) {
   return without.length ? without : words;
 }
 
-/** M2 matches among `ids`, with the adjective-only retry. */
+/**
+ * NPCs (anywhere in the world) that the phrase names as a noun phrase (M2 strict), e.g.
+ * "harrow", "frank harrow", "the old man". TT-131.
+ */
+function personsNamed(content, words) {
+  if (!words.length || !isObj(content.npcs)) return [];
+  return Object.keys(content.npcs).filter((id) => fits(entityWords(content, id), words, false));
+}
+
+/**
+ * M2 matches among `ids`, with the adjective-only retry. TT-131: a phrase that names a person
+ * never falls back to things named after them ("Harrow's key", "patient file ... PIKE"), so
+ * ASK HARROW / ACCUSE PIKE with the person elsewhere is "not here", not a question about keys.
+ */
 function matching(rc, ids, words) {
   if (!words.length) return [];
   const strict = ids.filter((id) => fits(entityWords(rc.content, id), words, false));
-  return strict.length ? strict : ids.filter((id) => fits(entityWords(rc.content, id), words, true));
+  if (strict.length) return strict;
+  if (personsNamed(rc.content, words).length) return [];
+  return ids.filter((id) => fits(entityWords(rc.content, id), words, true));
+}
+
+/**
+ * M6 for a phrase that names an absent named (`proper`) person: "Harrow isn't here." (TT-131; content
+ * may override `messages.personNotHere`, `{The}` = the NPC's display name). The verb's own
+ * `notHere` (ACCUSE) still wins. Null when the phrase does not name one person by name.
+ */
+function personNotHere(rc, words) {
+  if (!rc.lit || (rc.verb && rc.verb.notHere !== undefined)) return null;
+  const named = personsNamed(rc.content, words).filter((id) => {
+    if (rc.content.npcs[id].proper !== true) return false;
+    const own = wordsOf(rc.content.npcs[id].name ?? '');
+    return words.some((w) => own.includes(w));
+  });
+  if (named.length !== 1) return null;
+  const tpl = typeof rc.content.messages?.personNotHere === 'string' ? rc.content.messages.personNotHere : '{The} isn\'t here.';
+  const r = fail('notHere');
+  r.text = tpl.replace(/\{The\}/g, String(rc.content.npcs[named[0]].name));
+  return r;
 }
 
 /** Does the item satisfy the verb's `prefer` (M4 c)? */
@@ -247,8 +281,11 @@ function prefers(rc, prefer, id) {
 /** M4 narrowing; each step applies only if it leaves ≥ 1 candidate. No recency (C14). */
 function narrow(rc, hits, words) {
   const isScenery = (id) => !hasOwn(rc.state.items, id) && !hasOwn(rc.state.npcs, id);
+  const isPerson = (id) => hasOwn(rc.state.npcs, id);
   const steps = [
     (id) => entityWords(rc.content, id).names.some((n) => n.every((w) => words.includes(w))),
+    // TT-131: a person beats objects named after them.
+    (id) => !personsNamed(rc.content, words).length || isPerson(id),
     (id) => !isScenery(id),
     (id) => prefers(rc, rc.verb?.prefer, id),
   ];
@@ -293,7 +330,7 @@ function simpleIds(rc, np, ids) {
   if (typeof np.pronoun === 'string') return pronounIds(rc, np.pronoun, ids);
   const words = phraseWords(np);
   const hits = matching(rc, ids, words);
-  if (!hits.length) return { error: noMatch(rc) };
+  if (!hits.length) return { error: personNotHere(rc, words) ?? noMatch(rc) };
   const best = narrow(rc, hits, words);
   return best.length === 1 ? { ids: best } : { ambiguous: best };
 }
@@ -456,6 +493,7 @@ export function parseErrorResult(err) {
   const [message, keys] = PARSE_ERRORS[err?.error] ?? PARSE_ERRORS['no-pattern'];
   const params = {};
   for (const k of keys) if (typeof err[k] === 'string') params[k] = err[k];
+  if (err?.error === 'missing-noun' && typeof err.verbName === 'string') params.verbWord = err.verbName; // TT-131
   return fail(message, params);
 }
 

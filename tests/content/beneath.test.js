@@ -69,9 +69,9 @@ describe('bundle', () => {
     assert.equal(content.items.chains.scenery, true);
     assert.deepEqual(content.items.boiler_hatch.alsoIn, ['tunnel']);
     assert.equal(content.npcs.harrow.location, 'counting_room');
-    assert.deepEqual(content.daemons.map((d) => d.id), ['pike_arrives', 'attack']);
+    assert.deepEqual(content.daemons.map((d) => d.id), ['pike_arrives', 'attack', 'harrow_quiet']); // TT-130
     assert.ok(content.beats.some((b) => b.id === 'harrow_bleeds'));
-    assert.deepEqual(content.hints.map((h) => h.id), ['light', 'room', 'silas', 'mill', 'ledger', 'register', 'button', 'cuffs', 'files', 'accuse', 'way_down', 'door', 'arrest', 'free']);
+    assert.deepEqual(content.hints.map((h) => h.id), ['showdown', 'light', 'room', 'silas', 'mill', 'ledger', 'register', 'button', 'cuffs', 'files', 'accuse', 'way_down', 'door', 'arrest', 'free']);
     assert.equal(content.case.weak[0].if.in, 'counting_room');
     assert.ok(content.items.torch.before.turn_off);
     assert.ok(content.npcs.pike.before.ask && content.npcs.pike.before.tell && content.npcs.pike.before.talk);
@@ -139,7 +139,7 @@ describe('the iron door before Pike goes down', () => {
     assert.match(say(g, 'u'), /^Boiler Room\n/);
     assert.equal(say(g, 'x steps'), 'Stone steps up to the yard, and the lamp.', 'each room has its own steps (TT-105)');
     assert.match(say(g, 'd'), /^Tunnel\n/);
-    assert.equal(say(g, 'x steps'), 'Up to the morgue.');
+    assert.equal(say(g, 'x steps'), 'Iron rungs set in the brick at the south end, up to a square hatch in the morgue floor.'); // TT-131
     assert.match(say(g, 'x marks'), /^Gates of five every few yards/);
     assert.match(say(g, 'x bricks'), /^Victorian brick, sweating\./);
   });
@@ -385,8 +385,12 @@ describe('hints at the end of the critical path', () => {
   test('way down, door, arrest, free - in that order', () => {
     assert.equal(tier1(after(87)), "Harrow is under the mill, but Pike's trap won't open. Silas told you of other ways down.");
     assert.equal(tier1(after(88)), 'The iron door is barred from the far side. Somebody has to open it from in there.');
-    assert.equal(tier1(after(89)), "Pike has a knife and he's counting. You haven't long.");
-    assert.equal(tier1(after(90)), 'Frank is chained to the wall.');
+    // TT-130: in the Counting Room the `showdown` step answers first and says it outright.
+    assert.equal(tier1(after(89)), 'No more talking. HANDCUFF PIKE, now. Then CUT CHAINS to get Frank down.');
+    const out = after(89);
+    say(out, 's');
+    assert.equal(tier1(out), "Pike has a knife and he's counting. You haven't long.");
+    assert.equal(tier1(after(90)), 'Pike is cuffed. CUT CHAINS to get Frank down.');
   });
 
   test('the tiers advance and each costs 2 points', () => {

@@ -2,7 +2,7 @@
 id: TT-130
 title: Finale guidance - both blind testers failed to find HANDCUFF PIKE
 milestone: BUG
-status: in-progress
+status: done
 agent: writer
 model: opus
 depends: [TT-024]

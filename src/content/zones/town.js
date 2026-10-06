@@ -31,6 +31,9 @@ const MOVE_STONE = [
   'Behind it there is only a hollow where the tin was.',
 ];
 
+/** Church Lane, IN / ENTER COTTAGE (TT-131). */
+const BOARDED = "Edna Ashworth's cottage is boarded up tight, and the boards are police boards. If it's the church you want, the door is NORTH.";
+
 /* ------------------------------------------------------------------------ *
  *  Rooms                                                                    *
  * ------------------------------------------------------------------------ */
@@ -47,6 +50,7 @@ export const rooms = {
       { names: ['rails', 'track', 'line', 'train'], desc: 'The rails shine for a while and then the dark takes them. No more trains tonight.' },
       { names: ['rain'], desc: 'Lancashire rain: patient, thorough, personal.' },
     ],
+    before: { listen: 'Rain on the canopy, the gas lamp hissing, and the last of the train, a long way off. Then only the rain.' }, // TT-131
   },
 
   waiting_room: {
@@ -115,6 +119,7 @@ export const rooms = {
       { names: ['bar', 'counter', 'pumps'], desc: 'Thwaites on the pumps, a jar of pickled eggs, a till that rings like a church bell.' },
       { names: ['stair', 'stairs', 'staircase'], desc: "Narrow, carpeted, up to the guest rooms. Harrow's is at the top." },
     ],
+    before: { say: '"Speak up, love," says Maggie. The regulars listen without looking up.' }, // TT-131
   },
 
   harrows_room: {
@@ -170,7 +175,27 @@ export const rooms = {
           { text: 'Brown lino, worn pale in front of the counter.' },
         ],
       },
+      // TT-131: X TUNIC at the desk meant Pike's, not the button in your pocket (full-name match, A6.3 M4a).
+      {
+        names: ['tunic', 'uniform', 'buttons'],
+        desc: [
+          { if: [{ var: 'pikeState', eq: 'desk' }, { found: 'ev_button' }], text: "Pike's tunic, buttoned to the throat - all but the second button down, which is missing. A thread hangs where it was." },
+          { if: { var: 'pikeState', eq: 'desk' }, text: "Pike's tunic, buttoned to the throat, every silver button polished." },
+          { text: "Pike's tunic went out of the door on Pike." },
+        ],
+      },
     ],
+    before: {
+      // TT-131: the room talks about its clock and its pencil.
+      listen: [
+        { if: { var: 'pikeState', eq: 'desk' }, say: 'The clock. Under it, Pike\'s pencil on the desk: tap tap tap tap. Pause. Tap tap tap tap. He keeps time with it, exactly.' },
+        'The clock, ticking too loudly for an empty room.',
+      ],
+      say: [
+        { if: { var: 'pikeState', eq: 'desk' }, say: '"Sorry, Sergeant?" Pike looks up from his tea, pleasant and blank. Tap tap tap tap.' },
+        'You say it to an empty office. The clock answers.',
+      ],
+    },
   },
 
   cells: {
@@ -244,18 +269,27 @@ export const rooms = {
       { names: ['gate', 'back gate', 'chalk', 'strokes'], desc: 'Children\'s chalk: four strokes, then a fifth slashed across them and smudged out by a sleeve. Kids playing at the Tallyman. Or somebody practising.' },
       { names: ['gap', 'wall'], desc: 'A gap where the wall has given up. Beyond it, gravestones.' },
     ],
+    before: {
+      open: { if: { hook: 'dobj_coalhole' }, say: "You get your fingers under the rim and heave. It's rusted into its ring and it stays there. Nobody has been down there in years - nobody has been able to." }, // TT-131
+    },
   },
 
   church_lane: {
     name: 'Church Lane', zone: 'town', picture: 'church_lane',
     desc: "Church Lane climbs between yew hedges to St Jude's. Edna Ashworth's cottage stands dark at the corner, its windows boarded. The church door is north. High Street lies south-west.",
-    exits: { n: 'st_judes', sw: 'high_street', in: 'st_judes' },
+    // TT-131: no `in` exit. IN / ENTER COTTAGE meant Edna's boarded cottage, but went into the
+    // church; now they say so (before.go / enter), and ENTER CHURCH still goes in.
+    exits: { n: 'st_judes', sw: 'high_street' },
     scenery: [
       { names: ['yew', 'hedges', 'hedge', 'yews'], desc: 'Old yews, black and dripping. They have been here longer than the church.' },
       { names: ['cottage'], desc: "Edna Ashworth's. The first stroke. Boarded up now, as if the house were ashamed." },
       { names: ['windows', 'boards'], desc: 'Chipboard, nailed by somebody who wanted it done quickly.' },
-      { names: ['church door'], desc: 'Oak, studded, ajar. A light inside.' },
+      { names: ['church door', 'church'], desc: 'Oak, studded, ajar. A light inside.' },
     ],
+    before: {
+      enter: [{ if: { hook: 'dobj_church' }, movePlayer: 'st_judes' }, BOARDED],
+      go: { if: { hook: 'dir_in' }, say: BOARDED },
+    },
   },
 
   st_judes: {
@@ -285,6 +319,9 @@ export const rooms = {
       { names: ['desk'], desc: 'A heavy desk. The register takes up most of it.' },
       { names: ['lamp', 'green lamp'], desc: "A banker's lamp. Its light makes the register look like a stage." },
     ],
+    before: {
+      open: { if: { hook: 'dobj_cupboard' }, say: 'Locked, and the note says NOT TO BE TOUCHED - C.A. It is communion wine, not evidence. You leave it to the vicar.' }, // TT-131
+    },
   },
 
   churchyard: {
@@ -341,6 +378,7 @@ export const items = {
   wallet: {
     name: 'wallet', names: ['wallet', 'money', 'cash'], adjectives: ['leather'], location: 'player', personal: true,
     desc: "Your wallet. Inside: {money}, a photo you don't look at tonight, and a Barclaycard nobody in Blackmere will take.",
+    before: { open: "You thumb it open. {money}, a photo you don't look at tonight, and a Barclaycard nobody in Blackmere will take." }, // TT-131
   },
   torch: {
     name: 'torch', names: ['torch', 'flashlight'], adjectives: ['police', 'rubber'], location: 'waiting_room', critical: true,
@@ -403,6 +441,8 @@ export const items = {
     name: 'bottle of whisky', names: ['whisky', 'whiskey', 'bottle', 'scotch', 'bells'], location: null, critical: true,
     desc: "A half-bottle of Bell's. Maggie's price, Silas's poison.",
     criticalMsg: "That's for Silas. Hang on to it.",
+    // TT-131: BUY WHISKY FOR SILAS says who it is for, which is all Maggie wants to hear.
+    before: { buy: { if: [{ hook: 'for_silas' }, '!heard_of_silas'], setFlag: 'heard_of_silas', continue: true } },
   },
   pint: {
     name: 'pint of mild', names: ['pint', 'mild', 'beer', 'glass'], location: null,

@@ -2,7 +2,7 @@
 // Room, the chains, Pike's greeting and Harrow's bleeding cues. Prose verbatim.
 // Pike's arrival and the attack counter are story daemons (../beats.js, STORY §8.4).
 
-import { CUT_CHAINS } from '../shared.js';
+import { CUT_CHAINS, HARROW_CUFFS } from '../shared.js';
 
 /** Pike is down in the Counting Room: the iron door is ajar (STORY §8.3). */
 const PIKE_BELOW = { at: ['pike', 'counting_room'] };
@@ -16,7 +16,17 @@ const BLEED_CUE = {
 /** First tunnel entry starts the `dread` music (STORY §4.6, §14). */
 const TUNNEL_MUSIC = { if: '!tunnel_music', setFlag: 'tunnel_music', music: 'dread' };
 
-const TUNNEL_BASE = 'A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Steps climb south to the morgue; a ladder rises to a hatch overhead.';
+// TT-131: "rungs", not "steps" - the morgue end is the drawer hatch's iron rungs (STORY §4.5).
+const TUNNEL_BASE = 'A brick tunnel, barrel-vaulted, tally marks scratched every few yards. Iron rungs climb south to the morgue; a ladder rises to a hatch overhead.';
+
+/** KNOCK, or SAY / SHOUT through the iron door before Pike comes down (STORY §8.3). */
+const THROUGH_THE_DOOR = [
+  { if: PIKE_BELOW, say: 'The door swings at your knock. It is not barred any more.' },
+  {
+    say: 'Harrow stops praying. "Kid? Is that you? The bar\'s on this side and I can\'t reach it. He comes and goes by the trap up top. Find another way - and hurry."',
+    setFlag: 'heard_harrow',
+  },
+];
 
 /* ------------------------------------------------------------------------ *
  *  Rooms                                                                    *
@@ -58,7 +68,7 @@ export const rooms = {
           { text: 'Iron, studded, shut fast. It is barred on the far side - you can hear the beam shift in its brackets when you push. Beyond it, Harrow is praying.' },
         ],
       },
-      { names: ['steps'], desc: 'Up to the morgue.' },
+      { names: ['steps', 'rungs'], desc: 'Iron rungs set in the brick at the south end, up to a square hatch in the morgue floor.' },
       { names: ['ladder'], desc: 'Iron rungs up to the boiler hatch.' },
     ],
     // STORY §8.5: Harrow's cough after 23:00 while chained; the first entry starts the music.
@@ -72,12 +82,16 @@ export const rooms = {
     ],
     // STORY §7.4 room-level use.
     before: {
-      knock: [
-        { if: PIKE_BELOW, say: 'The door swings at your knock. It is not barred any more.' },
-        {
-          say: 'Harrow stops praying. "Kid? Is that you? The bar\'s on this side and I can\'t reach it. He comes and goes by the trap up top. Find another way - and hurry."',
-          setFlag: 'heard_harrow',
-        },
+      knock: THROUGH_THE_DOOR,
+      // TT-131: SAY / SHOUT through the door reaches Harrow like a knock; LISTEN hears what the desc says.
+      say: [
+        { if: PIKE_BELOW, say: 'Your voice goes through the open door and comes back off brick. Beyond it, someone stops counting, and then starts again.' },
+        THROUGH_THE_DOOR[1],
+      ],
+      listen: [
+        { if: PIKE_BELOW, say: 'Through the open door: a man counting under his breath, slow and patient. And another man, breathing badly.' },
+        { if: { turnGte: 180 }, say: 'Behind the iron door Harrow is praying, slower now, losing his place. He is alive. You could KNOCK.' },
+        'Behind the iron door, very faint, a man is praying. You know the voice: Frank Harrow. You could KNOCK.',
       ],
     },
   },
@@ -113,6 +127,18 @@ export const rooms = {
         ],
       },
     ],
+    before: {
+      // TT-131 / TT-130: LISTEN and SAY in here.
+      listen: [
+        { if: { var: 'pikeState', eq: 'counting' }, say: 'Pike, counting under his breath. Harrow\'s breathing, wet and shallow. Your own heart.', then: HARROW_CUFFS },
+        "Harrow's breathing, wet and shallow. Pike's lips moving. The brick drips.",
+      ],
+      say: [
+        { if: { var: 'pikeState', eq: 'counting' }, say: 'Pike tilts his head and listens to you the way he listens to the rain. Then he goes on counting.', then: HARROW_CUFFS },
+        { if: { var: 'pikeState', eq: 'restrained' }, say: 'Pike doesn\'t answer. He is counting the links of the cuffs.' },
+        '"Save your breath, kid," says Harrow.',
+      ],
+    },
     // STORY §8.4: greeting first, then the bleeding cue (REACTION_ORDER: `say` before `then`).
     onEnter: [
       {

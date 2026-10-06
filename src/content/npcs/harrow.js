@@ -3,6 +3,15 @@
 
 import { CUT_CHAINS } from '../shared.js';
 
+/** TT-130: while Pike counts, Harrow has one subject only. */
+const NOT_NOW = {
+  if: [{ var: 'pikeState', eq: 'counting' }, { var: 'harrowFreed', eq: false }],
+  say: [
+    { if: { carried: 'handcuffs' }, text: '"Not now, kid! He\'s got a knife - get the cuffs on him!"' },
+    { text: '"Not now, kid! Cuffs - mine are in the car, moor road. Go!"' },
+  ],
+};
+
 export const harrow = {
   name: 'Harrow', names: ['harrow', 'frank', 'frank harrow', 'inspector', 'di', 'partner'], proper: true,
   location: 'counting_room',
@@ -21,6 +30,8 @@ export const harrow = {
     '"I\'m all right. I\'m not all right. Later."',
   ],
   before: {
+    ask: NOT_NOW,
+    tell: NOT_NOW,
     free: CUT_CHAINS,
     cut: CUT_CHAINS,
     attack: 'He\'s on your side. Mostly.',

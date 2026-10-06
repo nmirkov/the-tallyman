@@ -2,6 +2,19 @@
 // not yet done and costs `scoring.hintCost` points. Array order = the critical path.
 
 export const hints = [
+  // TT-130: first, so that in the Counting Room - Pike counting, or Harrow still chained -
+  // HINT always answers the one question that matters, whatever else is still undone.
+  {
+    id: 'showdown',
+    done: { not: [{ in: 'counting_room' }, { any: [{ var: 'pikeState', eq: 'counting' }, { var: 'harrowFreed', eq: false }] }] },
+    tiers: [[
+      { if: [{ var: 'pikeState', eq: 'counting' }, { carried: 'handcuffs' }, { var: 'harrowFreed', eq: true }], text: 'No more talking. HANDCUFF PIKE, now.' },
+      { if: [{ var: 'pikeState', eq: 'counting' }, { carried: 'handcuffs' }], text: 'No more talking. HANDCUFF PIKE, now. Then CUT CHAINS to get Frank down.' },
+      { if: { var: 'pikeState', eq: 'counting' }, text: "You've nothing to hold him with. Go SOUTH - his count waits while you're gone - and fetch Frank's handcuffs from the Cortina on the moor road." },
+      { if: { carried: 'bolt_cutters' }, text: 'Pike is cuffed. CUT CHAINS to get Frank down.' },
+      { text: "Pike is cuffed. Frank's chains want cutters: Silas's bolt cutters, from the shed by the lock." },
+    ]],
+  },
   {
     id: 'light', done: { awarded: 'torch_lit' },
     tiers: [

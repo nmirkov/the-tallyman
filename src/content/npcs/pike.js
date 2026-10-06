@@ -1,7 +1,7 @@
 // PC Arthur Pike, the constable (docs/STORY.md §2.1, §6.3, §8.2). At the Police House
 // desk until he flees (ACCUSE) or leaves on his schedule; then the Counting Room.
 
-import { ARREST_PIKE } from '../shared.js';
+import { ARREST_PIKE, HARROW_CUFFS } from '../shared.js';
 
 /** The Counting Room voice: fires only there, so the desk topics are untouched. */
 const COUNTING_VOICE = [
@@ -9,6 +9,20 @@ const COUNTING_VOICE = [
   {
     if: { in: 'counting_room' },
     pick: ['"Four," he says, not to you. "Four, and one to settle."', '"She was fourteen, Sergeant. Somebody has to keep the book."', '"Don\'t make me count you, Sergeant. You\'re not in the ledger."'],
+    then: HARROW_CUFFS,
+  },
+];
+
+/**
+ * TT-130: SHOW / GIVE in the Counting Room. The desk replies (`shows`, `refuse`) belong to
+ * the Police House; down here evidence is no use to anyone, and Harrow says so.
+ */
+const COUNTING_HANDS = [
+  { if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'restrained' }], say: 'He does not look up. He is counting the links of the cuffs.' },
+  {
+    if: { in: 'counting_room' },
+    say: 'He doesn\'t look at it. He looks at you, measuring the floor between you. "I keep my own book, Sergeant."',
+    then: HARROW_CUFFS,
   },
 ];
 
@@ -35,6 +49,8 @@ export const pike = {
     ask: COUNTING_VOICE,
     tell: COUNTING_VOICE,
     talk: COUNTING_VOICE,
+    show: COUNTING_HANDS,
+    give: COUNTING_HANDS,
     arrest: ARREST_PIKE,
     attack: [
       { if: { var: 'pikeState', eq: 'restrained' }, say: 'He is cuffed and on his knees. That isn\'t who you are.' },

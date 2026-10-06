@@ -360,7 +360,12 @@ export function parseCommand(tokens, vocab) {
     if (unknown) return { error: 'unknown-word', word: unknown.w, raw };
     if (!head) return { error: 'no-verb', word: entries[0].w, raw };
     const base = { verb: head.verb, verbWord: head.verbWord, raw };
-    if (entries.length === head.len && hasSlot(v, head.verb, 'dobj')) return { error: 'missing-noun', ...base };
+    if (entries.length === head.len && hasSlot(v, head.verb, 'dobj')) {
+      // TT-131: "X" alone asks "What do you want to examine?", not "...to x?".
+      const name = v.verbById[head.verb]?.words?.[0];
+      if (head.verbWord.length === 1 && typeof name === 'string' && name.length > 1) base.verbName = name;
+      return { error: 'missing-noun', ...base };
+    }
     return { error: 'no-pattern', ...base };
   } catch {
     return { error: 'no-pattern', raw: typeof raw === 'string' ? raw : '' };

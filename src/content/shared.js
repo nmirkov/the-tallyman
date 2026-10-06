@@ -58,6 +58,21 @@ export const CUT_CHAINS = [
   "They're padlocked to the rings. You'll need cutters.",
 ];
 
+/**
+ * TT-130: while Pike counts, anything you try in the Counting Room that is not the cuffs
+ * (ACCUSE, SHOW, GIVE, ASK, SAY ...) gets Harrow's shout, pointing at the cuffs - or at the
+ * car, if you came without them. Appended with `then`; silent anywhere else.
+ */
+export const HARROW_CUFFS = {
+  // `harrow_shouted` lets the attack counter's warning this turn leave Harrow out (beats.js).
+  if: [{ in: 'counting_room' }, { var: 'pikeState', eq: 'counting' }], style: 'alert', setFlag: 'harrow_shouted',
+  say: [
+    { if: [{ carried: 'handcuffs' }, { var: 'attack', lte: 1 }], text: 'Behind him Harrow drags his head up. "Don\'t talk to him, kid - cuff him! Get the cuffs on him!"' },
+    { if: { carried: 'handcuffs' }, text: 'Harrow, from the wall: "Stop talking! The cuffs, kid - the cuffs!"' },
+    { text: 'Behind him Harrow drags his head up. "Don\'t talk to him, kid! Cuffs - mine are in the car, moor road. Get out and get them!"' },
+  ],
+};
+
 /** npcs.pike.before.arrest (A14.3, extended); also PUT / USE HANDCUFFS with Pike present. */
 export const ARREST_PIKE = [
   { if: { var: 'pikeState', eq: 'restrained' }, say: 'He is going nowhere. He is counting the links of the cuffs.' },

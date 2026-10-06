@@ -40,7 +40,7 @@ export const FLAGS = Object.freeze([
   'entered_harrows_room', 'phoned', 'alibi_known', 'letters_found', 'silas_told', 'shed_open', 'found_car',
   'climbed_down', 'torch_off_warned', 'dark_warned', 'mill_chain_cut', 'entered_mill', 'saw_girl', 'heard_praying', 'heard_harrow', 'hatch_oiled',
   'ward_counting', 'morgue_hatch_found', 'tunnel_music', 'pike_greeted', 'pike_fled', 'accused_maggie', 'accused_ashdown',
-  'accused_silas',
+  'accused_silas', 'harrow_shouted', 'silas_dry',
 ]);
 
 /** STORY §11: 13 awards summing to 100. */

@@ -34,7 +34,7 @@ export const maggie = {
   // Money invariant (STORY §13): until Silas has his whisky, pints and the 10p never take
   // the balance below 200p, so the whisky can always be bought.
   sells: {
-    whisky: { price: 200, if: 'heard_of_silas', refuse: '"Whisky? You\'re on duty, love. Unless it\'s for somebody who needs loosening up."', text: '"For Silas, is it? He\'ll talk for a drop of this." She wraps a half-bottle of Bell\'s in a Bugle. "Two pound."' },
+    whisky: { price: 200, if: 'heard_of_silas', refuse: '"Whisky? You\'re on duty, love. Unless it\'s for somebody who needs loosening up."', text: '"For Silas, is it? He\'ll talk for a drop of this." She wraps a half-bottle of Bell\'s in a Bugle and slides it across. "Two pound." You pay her, and the bottle is yours.' },
     pint: { price: 50, if: { any: [{ moneyGte: 260 }, 'silas_told'] }, refuse: '"Not with what\'s left in your wallet, love. Keep summat back."', text: 'She pulls you a pint of mild. "Fifty pence. On the house would be bribery."' },
   },
   topics: {
@@ -75,6 +75,16 @@ export const maggie = {
     t_ghost: '"Silas\'ll tell you all about her. I won\'t."',
     t_self: '"Me? Twenty years behind this bar. Widowed in \'81. Don\'t you start."',
     t_crypt: '"Ask the vicar." Too quickly.',
+    // TT-131: ASK MAGGIE ABOUT ROOMS.
+    t_room: [
+      { if: 'maggie_saw_card', say: '"Room three, top of the stairs. You\'ve got his key, love."' },
+      '"Mr Harrow\'s room? Not to just anybody. Show me something official and we\'ll see."',
+    ],
+    // TT-131: ASK MAGGIE ABOUT MARGARET / HERSELF / MAGGIE. The letters are signed "M.".
+    maggie: [
+      { if: 'letters_found', say: 'She stops polishing. "Margaret\'s my Sunday name, love. Nobody calls me it." A beat. "Nearly nobody."' },
+      '"Me? Twenty years behind this bar. Widowed in \'81. Don\'t you start."',
+    ],
   },
   default: '"Can\'t help you there, love."',
   refuse: '"That\'s kind, love, but no."',

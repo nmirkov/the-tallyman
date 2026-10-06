@@ -165,7 +165,8 @@ describe('chains and barriers (A7.2)', () => {
   test('parse and resolution errors stop the chain for free', () => {
     const g = newGame();
     assert.deepEqual(g.input('take banana then n'), [sys('I don\'t know the word "banana".'), sys('(Commands after TAKE were ignored.)')]);
-    assert.deepEqual(g.input('take maggie, n'), [sys(MESSAGES.notHere), sys('(Commands after TAKE were ignored.)')]);
+    // TT-131: an absent person named by name is "<Name> isn't here." (resolve.js personNotHere).
+    assert.deepEqual(g.input('take maggie, n'), [sys('Maggie isn\'t here.'), sys('(Commands after TAKE were ignored.)')]);
     assert.equal(g.snapshot().turn, 0);
   });
 

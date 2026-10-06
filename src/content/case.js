@@ -1,5 +1,7 @@
 // ACCUSE machinery and hazards (docs/STORY.md §8.1, §8.6; A14.1 rules 2-5, A14.3).
 
+import { HARROW_CUFFS } from './shared.js';
+
 export const caseDef = {
   culprit: 'pike',
   threshold: 3,
@@ -15,10 +17,11 @@ export const caseDef = {
     {
       award: 'accusation',
       say: 'You say it out loud: the whole caution, every name. Pike listens with his head on one side, counting the names off on his fingers. "Four," he says. "You forgot one."',
+      then: HARROW_CUFFS, // TT-130: words won't hold him - point at the cuffs
     },
   ],
   weak: [
-    { if: { in: 'counting_room' }, nerve: 15, say: '"Prove it," says Pike, and smiles, and goes on counting.' },
+    { if: { in: 'counting_room' }, nerve: 15, say: '"Prove it," says Pike, and smiles, and goes on counting.', then: HARROW_CUFFS },
     { nerve: 15, say: 'Pike laughs - a big easy laugh with nothing behind it. "Me? On what, Sergeant? A feeling?" He leans across the counter. "Come back when you\'ve got something you can count."' },
   ],
   wrong: [
