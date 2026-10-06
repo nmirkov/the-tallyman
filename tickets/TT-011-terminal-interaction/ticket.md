@@ -2,7 +2,7 @@
 id: TT-011
 title: Terminal interaction: wrap, typewriter, paging, input, history, scrollback, mobile input, transcript
 milestone: M2
-status: todo
+status: in-progress
 agent: ui-dev
 model: opus
 depends: [TT-003, TT-101]

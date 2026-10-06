@@ -40,3 +40,6 @@ All blocking items resolved. Notes and where they are handled:
 
 ### Round 1 — 2026-10-06 — CHANGES REQUIRED
 9 blocking: critical items destroyable via container; exit-condition exceptions swallowed; nested endings overwritten; unreachable items manipulable inside closed containers; stale presentation after non-action lighting changes; hooks lose current command; malformed pending commands pass save validation; API mutations can commit unsavable states; terminal save failures crash. → Fix ticket **TT-101**.
+
+### Round 2 — 2026-10-06 — CHANGES REQUIRED
+All 9 round-1 findings RESOLVED (reproductions re-run by Codex). 2 new blocking: reveal-list loops continue after a nested death; strict-mode rethrow happens before state/UNDO rollback. → **TT-102**.
