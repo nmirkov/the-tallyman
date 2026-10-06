@@ -4,10 +4,10 @@
 
 <div align="center">
 
-## [▶ PLAY IN YOUR BROWSER](https://__GH_USER__.github.io/the-tallyman/)
+## [▶ PLAY IN YOUR BROWSER](https://nmirkov.github.io/the-tallyman/)
 
 No install. To play offline, download **`tallyman.html`** from the
-[latest release](https://github.com/__GH_USER__/the-tallyman/releases/latest) and double-click it.
+[latest release](https://github.com/nmirkov/the-tallyman/releases/latest) and double-click it.
 
 </div>
 
