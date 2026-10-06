@@ -337,7 +337,7 @@ shows: { warrant_card: [
 | `light` | `{lit?, fuel?, needs?, needsMsg?, outText?}` | Light source; `fuel` = lit turns (omitted = endless); `needs` = Cond to switch on. |
 | `wearable` | bool | WEAR / REMOVE. |
 | `readable` | `Reaction` | READ (may add evidence / notes). |
-| `edible` / `drinkable` | `Reaction` | EAT / DRINK allowed: reaction, then item → `null`. Forbidden on critical items (lint). |
+| `edible` / `drinkable` | `Reaction` | EAT / DRINK allowed: reaction, then item → `null`. Forbidden on critical items (lint). Contents of an edible/drinkable container spill into the current room (TT-103). |
 | `before` / `after` | `{verbId: Reaction}` | Command reactions when this item is the direct or indirect object. |
 
 ```js
@@ -418,7 +418,7 @@ hints: [ { id: 'light', done: { awarded: 'torch_lit' },
 - **afterAction** `Reaction[]` — step B: each element is run (all of them, in order) after every turn-costing command's action phase, unless the game has ended.
 
 ### A4.13 Hazards, case, vars
-- **Hazard** `{room, exit? | verbs?+objects?, unless?, warn, ending}` — PLAN "warned once, then fatal" (A7.5 step 1).
+- **Hazard** `{room, exit? | verbs?+objects?, unless?, warn, ending}` — PLAN "warned once, then fatal" (A7.5 step 1). `objects` is skipped when the command has no object (C31): `verbs: ['jump'], objects: ['canal']` also fires on a bare `JUMP`. Declare the hazard without `objects` only when that is intended.
 - **CaseDef** `{culprit, threshold, suspects, confirm, correct, weak, wrong, cancelText?, other?}` — ACCUSE (A14 rules 2–5).
 - **VarDecl** `{type: 'int'|'bool'|'str'|'enum', init, values?, nullable?, min?, max?}` — `setVar` and `validateSave` enforce type, range, nullability and enum membership.
 
@@ -449,7 +449,7 @@ Text (`{hook}`), Cond (`{hook}`) and Reactions (`hook:`). Signature
 
 **Rules.**
 - **H1** Deterministic: no `Math.random`, `Date`, timers, I/O, or module-level mutable variables. Randomness only via `api.rng`.
-- **H2** Change the game only through `api` methods. `api.state` and `api.content` are read-only views; writing to them is a contract violation (strict mode freezes content; tests may freeze state).
+- **H2** Change the game only through `api` methods. `api.state` and `api.content` are read-only views; writing to them is a contract violation (strict mode freezes content; tests may freeze state). Not enforced at runtime; instead, in strict mode every committed line is checked with `validateSave(serialise(state))` and a breach throws (TT-103).
 - **H3** Never store functions or non-JSON values anywhere in state.
 - **H4** A thrown error aborts the whole input line and rolls state back (A7.9).
 - **H5** Return value by phase: `before` → `false` = "not handled" (R4); `cond` → boolean; `text` → string; all others ignored.
@@ -826,7 +826,7 @@ Applied at A7.5 step 2 — before any content reaction, so content cannot accide
 | `give` to an NPC whose `accepts` lacks the item | refused: `personal` | refused: `criticalMsg ?? critical` | NPC `refuse` reaction; item kept |
 | `give` with an `accepts` entry | refused (lint forbids personal items in `accepts`) | allowed | allowed |
 | `show` | allowed | allowed | allowed |
-| `throw` | refused: `personal` | refused: `critical` | in a `sink` room: lost (`loc = null`) with the room's text; else dropped ("Thrown.") |
+| `throw` | refused: `personal` | refused: `critical` | in a `sink` room: lost (`loc = null`, with everything inside it) with the room's text; else dropped ("Thrown.") |
 | `eat`, `drink` | refused: `personal` | refused: `critical` | `edible`/`drinkable` reaction then `loc = null`; else "That's plainly inedible." / "You can't drink that." |
 | `break`, `tear`, `cut` (as dobj) | refused: `personal` | refused while carried: `critical` (not yet carried — e.g. TEAR PAGE out of the ledger — content reactions decide) | content reactions / default |
 

@@ -223,6 +223,20 @@ function remove(cmd, api) {
   return succeed(api, 'takeOff', id);
 }
 
+/**
+ * Removes an item from play (EAT / DRINK, THROW into a sink). Its contents never keep a
+ * `loc` that points at the vanished container: they spill to `spillTo` (a room id), or,
+ * for `null`, vanish with it, nested contents included.
+ */
+function vanish(api, id, spillTo) {
+  const run = runOf(api);
+  for (const child of world.contentsOf(api.state, id)) {
+    if (spillTo === null) vanish(api, child, null);
+    else moveEntity(run, child, spillTo);
+  }
+  moveEntity(run, id, null);
+}
+
 /** EAT / DRINK: the item's `edible` / `drinkable` reaction, then it is gone (A8.7). */
 function consume(slot, refusal) {
   return (cmd, api) => {
@@ -230,7 +244,7 @@ function consume(slot, refusal) {
     const reaction = isItem(api, id) ? itemDef(api, id)[slot] : undefined;
     if (reaction === undefined) return refuse(api, refusal);
     runReaction(runOf(api), reaction, { phase: slot, cmd, self: id });
-    moveEntity(runOf(api), id, null);
+    vanish(api, id, api.state.roomId);
     return OK;
   };
 }
@@ -240,7 +254,7 @@ function throwIt(cmd, api) {
   if (!isItem(api, id) || !world.isCarried(api.state, id)) return refuse(api, 'notHolding');
   const sink = api.content.rooms[room(api)]?.sink;
   if (sink !== undefined) {
-    moveEntity(runOf(api), id, null);
+    vanish(api, id, null);
     say(runOf(api), sink, undefined, room(api));
     return OK;
   }

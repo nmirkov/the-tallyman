@@ -2,7 +2,7 @@
 id: TT-103
 title: Address R1 round-3 non-blocking notes
 milestone: BUG
-status: todo
+status: in-progress
 agent: engine-dev
 model: sonnet
 depends: [TT-102]

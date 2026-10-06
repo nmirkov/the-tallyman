@@ -193,6 +193,7 @@ export function createGame(options = {}) {
     run.events = [];
     try {
       fn(lineStart);
+      if (strict) assertSaveable();
       return finish(run.events);
     } catch (e) {
       run.state = lineStart;
@@ -373,6 +374,15 @@ export function createGame(options = {}) {
 
   function input(line) {
     return contained((lineStart) => processLine(line, lineStart));
+  }
+
+  /**
+   * Strict mode only (A5 H2): a hook that broke a save invariant through the live
+   * `api.state` fails the line here, during tests, instead of at LOAD time.
+   */
+  function assertSaveable() {
+    const r = validateSave(serialise(run.state, content), content);
+    if (!r.ok) throw new Error(`state invariant broken by a hook: ${r.error}`);
   }
 
   /** A2 `load`: validate atomically (A11 V13), swap state, clear UNDO, refresh. */
