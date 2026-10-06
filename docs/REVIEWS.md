@@ -46,3 +46,8 @@ All 9 round-1 findings RESOLVED (reproductions re-run by Codex). 2 new blocking:
 
 ### Round 3 — 2026-10-06 — **APPROVED WITH NOTES** (same-vendor fallback, D-009)
 Codex unavailable (workspace out of credits). Independent Claude reviewer (Fable, fresh context, read-only): both round-2 issues RESOLVED (reproductions re-run), 20 scripted contract scenarios + 12 000-line fuzz found no defects. 6 non-blocking notes → **TT-103** (low). Tag `m1`.
+
+## Content review R3 (M3, `m1..743ff1b`)
+
+### Round 1 — 2026-10-06 — **APPROVED WITH NOTES** (same-vendor fallback, D-009)
+Reviewer played the game adversarially via tools/play.js. 0 blocking; 13 notes (incl. one unwarned dark death path, missing Counting Room scenery, TIE verb, stale QA report) → **TT-105**.
