@@ -1,3 +1,15 @@
+<div align="center">
+
+# ⛔ SPOILERS ⛔
+
+### This document gives away the solution to THE TALLYMAN:<br>who the killer is, how the puzzles work and how every ending is reached.
+
+**[▶ Play the game first](https://__GH_USER__.github.io/the-tallyman/), then come back.**
+
+</div>
+
+---
+
 # Playtest A report: "The Tallyman" (Blackmere, 15 Nov 1984)
 
 Tester style: thorough explorer, blind, 1980s text-adventure background.

@@ -1,3 +1,15 @@
+<div align="center">
+
+# ⛔ SPOILERS ⛔
+
+### This document gives away the solution to THE TALLYMAN:<br>who the killer is, how the puzzles work and how every ending is reached.
+
+**[▶ Play the game first](https://__GH_USER__.github.io/the-tallyman/), then come back.**
+
+</div>
+
+---
+
 # Blind playtest report (TT-024)
 
 Two clean-context AI testers played via the terminal player with no access to the repo (D-010). Raw reports/logs: `docs/playtest/`.

@@ -1,3 +1,15 @@
+<div align="center">
+
+# ⛔ SPOILERS ⛔
+
+### This document gives away the solution to THE TALLYMAN:<br>who the killer is, how the puzzles work and how every ending is reached.
+
+**[▶ Play the game first](https://__GH_USER__.github.io/the-tallyman/), then come back.**
+
+</div>
+
+---
+
 # Playtest B log (impatient)
 - T7 21:33 Market Square. ~T20 Black Lamb (SHOW CARD TO MAGGIE worked, got key+batteries; BUY WHISKY worked).
 - Harrow's room, Police House (Pike), No.13 Chapel St (button, 22:00), church/vestry/crypt (register; letters = red herring), Moor Road car (22:22), asylum 22:30, quarry hut crowbar 22:55, records file 23:02, lock/Silas 23:10, mill 23:17, counting room 23:41.

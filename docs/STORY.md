@@ -1,3 +1,15 @@
+<div align="center">
+
+# ⛔ SPOILERS ⛔
+
+### This document gives away the solution to THE TALLYMAN:<br>who the killer is, how the puzzles work and how every ending is reached.
+
+**[▶ Play the game first](https://__GH_USER__.github.io/the-tallyman/), then come back.**
+
+</div>
+
+---
+
 # THE TALLYMAN - Story Bible (STORY.md)
 
 > **Status:** authoritative content source for TT-016...TT-018 (content), TT-019...TT-021 (art),

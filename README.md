@@ -2,6 +2,22 @@
 
 *A crime thriller in text, Blackmere, November 1984.*
 
+<div align="center">
+
+## [▶ PLAY IN YOUR BROWSER](https://__GH_USER__.github.io/the-tallyman/)
+
+No install. To play offline, download **`tallyman.html`** from the
+[latest release](https://github.com/__GH_USER__/the-tallyman/releases/latest) and double-click it.
+
+</div>
+
+> [!CAUTION]
+> ## Play first, read later
+> **This README is spoiler-free. Almost nothing else in this repository is.**
+> The story bible, the plan, the tests, the tickets and the build paper name the killer
+> and spell out the solution. The worst offenders carry a big **⛔ SPOILERS ⛔** banner at the
+> top. See the [reading guide](#reading-guide) below.
+
 ![Title screen](docs/screenshots/art-021-title.png)
 
 Four people have been found dead in four weeks in a fog-bound Lancashire mill town, each
@@ -93,6 +109,7 @@ tickets/       one folder per ticket (spec + implementation notes)
 The Tallyman was built autonomously by a team of AI agents from a single instruction, with
 no human in the loop:
 
+- **The paper:** [`docs/how-we-built-it.pdf`](docs/how-we-built-it.pdf) tells the whole story of the night: the prompt, the process, the numbers, the mistakes and the lessons (⛔ spoilers).
 - **Plan:** [`docs/PLAN.md`](docs/PLAN.md), reviewed by OpenAI Codex until approved (3 rounds).
 - **Engine contract:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Story bible:** [`docs/STORY.md`](docs/STORY.md). It contains spoilers.
@@ -106,6 +123,23 @@ no human in the loop:
   no access to the code played the game; see
   [`docs/PLAYTEST-REPORT.md`](docs/PLAYTEST-REPORT.md).
 - **Progress:** [`docs/progress.html`](docs/progress.html).
+
+## Reading guide
+
+| Safe before playing | ⛔ Spoilers: read after playing |
+|---|---|
+| This README | [`docs/how-we-built-it.pdf`](docs/how-we-built-it.pdf), the paper on how the game was built overnight |
+| [`docs/progress.html`](docs/progress.html), the build dashboard (ticket titles only) | [`docs/STORY.md`](docs/STORY.md), the full story bible and walkthrough |
+| [`docs/art-preview.html`](docs/art-preview.html), every picture | [`docs/PLAN.md`](docs/PLAN.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DECISIONS.md`](docs/DECISIONS.md) |
+| `tools/audio-demo.html`, every sound and tune (via `npm start`) | [`docs/REVIEWS.md`](docs/REVIEWS.md), [`docs/QA-REPORT.md`](docs/QA-REPORT.md), [`docs/PLAYTEST-REPORT.md`](docs/PLAYTEST-REPORT.md), `docs/playtest/` |
+| | `tickets/`, `tests/`, `src/content/`: the solution in code form |
+
+## Licence
+
+- **Code** (`src/engine`, `src/ui`, `tools`, `tests`): [MIT](LICENSE).
+- **Story, text, pictures, music and sound data** (`src/content`, `src/ui/audio/tunes.js`, `docs/`):
+  [CC BY 4.0](LICENSE-CONTENT.md). Share and adapt freely; credit "The Tallyman by Nenad Mirkov".
+- **font8x8** by Daniel Hepper: public domain.
 
 ## Credits
 
