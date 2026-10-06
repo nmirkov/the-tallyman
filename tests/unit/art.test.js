@@ -161,3 +161,33 @@ test('fx: applyAllFx layers the def\'s effects; unknown ids throw', () => {
   assert.throws(() => applyFx(tiny, 'snow', 0), RangeError);
   assert.throws(() => applyAllFx(tiny, 0, 0, ['snow']), RangeError);
 });
+
+// ---------- TT-021 screen art ----------
+
+const SCREENS = ['title', 'ending_victory', 'ending_pyrrhic', 'ending_got_away', 'ending_fifth', 'ending_wrong', 'ending_death'];
+
+test('art: the seven 40x25 screens exist with their briefed fx', () => {
+  const fx = { title: ['rain', 'lightning'], ending_victory: ['fog'], ending_pyrrhic: [], ending_got_away: ['fog'],
+    ending_fifth: ['flicker'], ending_wrong: ['rain'], ending_death: ['flicker'] };
+  for (const id of SCREENS) {
+    assert.ok(art[id], id);
+    assert.deepEqual([art[id].w, art[id].h], [40, 25], id);
+    assert.deepEqual([...(art[id].fx ?? [])].sort(), [...fx[id]].sort(), id);
+  }
+});
+
+test('art: rows the UI draws over stay black and no fx ever touches them', () => {
+  const reserved = (id) => (id === 'title' ? [24] : [19, 20, 21, 22, 23, 24]);
+  for (const id of SCREENS) {
+    const a = art[id];
+    for (const y of reserved(id)) {
+      for (let x = 0; x < 40; x++) {
+        const c = cellAt(a, x, y);
+        assert.ok(c.fg === '0' && c.bg === '0', `${id} (${x},${y}) is not black`);
+      }
+    }
+    for (let tick = 0; tick < 300; tick += 3) {
+      for (const o of applyAllFx(a, tick)) assert.ok(!reserved(id).includes(o.y), `${id} fx touches reserved row ${o.y} at tick ${tick}`);
+    }
+  }
+});

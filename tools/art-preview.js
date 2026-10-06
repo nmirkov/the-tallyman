@@ -4,11 +4,16 @@
 // docs/art-preview.html (works from file://, no server). Every picture is shown in the C64 and
 // Spectrum themes at 2x and 4x with its id, room and STORY.md brief, animated with its fx, in
 // situ on a full 40x25 game screen, plus an fx lab running all four effects.
-// --screenshots also renders docs/screenshots/art-gate-*.png with headless Chrome
-// (override the binary with CHROME=/path/to/chrome).
+// TT-021 adds the 40x25 screen art (title, endings): shown full-screen with the rows the UI
+// reserves for its own text ("PRESS ANY KEY", ending title and score) overlaid as the game
+// would print them, so the art can be judged in place.
+// --screenshots also renders docs/screenshots/art-gate-*.png (location pictures) and
+// docs/screenshots/art-021-*.png (screens) with headless Chrome (override the binary with
+// CHROME=/path/to/chrome); --screenshots=screens renders only the art-021 set.
 //
-// Page query params (used for the screenshots): view = all (default) | gallery | zoom | situ | fx,
-// theme = c64 | spectrum, scale = 2 | 4, id = <art id>, static = 1 (freeze), tick = <n>.
+// Page query params (used for the screenshots): view = all (default) | gallery | zoom | situ | fx
+// | screens, theme = c64 | spectrum, scale = 2 | 4, id = <art id>, static = 1 (freeze),
+// tick = <n>, overlay = 0 (screens without the UI text).
 import { build } from 'esbuild';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -16,6 +21,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { art } from '../src/content/art/index.js';
+import { endings } from '../src/content/endings.js';
 import { applyFx, cellAt } from '../src/ui/fx.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -45,6 +51,21 @@ export function parseStory(md) {
   return rooms;
 }
 
+/**
+ * Screen-art briefs from STORY.md §14.2 ("- `title`: ..." items under "Screen art"), by id.
+ * @param {string} md
+ * @returns {Record<string, string>}
+ */
+export function parseScreenBriefs(md) {
+  const out = {};
+  const sec = md.split('**Screen art (40x25)**')[1]?.split('- **Art-gate')[0] ?? '';
+  for (const item of sec.split(/\n {2}- (?=`)/).slice(1)) {
+    const m = /^`([a-z0-9_]+)`: ([\s\S]+)$/.exec(item.trim());
+    if (m) out[m[1]] = m[2].replace(/\s+/g, ' ').trim();
+  }
+  return out;
+}
+
 /** First tick in [0, limit) at which an effect changes the picture (for static fx frames). */
 function firstActiveTick(def, fxId, pred = (o) => o.length > 0, limit = 400) {
   for (let t = 0; t < limit; t++) if (pred(applyFx(def, fxId, t))) return t;
@@ -58,7 +79,8 @@ function pageMain(A, META) {
   const view = q.get('view') || 'all';
   const frozen = q.get('static') === '1';
   const fixedTick = Number(q.get('tick') || 0);
-  const ids = Object.keys(art);
+  const ids = Object.keys(art).filter((id) => art[id].h === 9);
+  const screenIds = Object.keys(art).filter((id) => art[id].h === 25);
   const animated = [];
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
   const app = document.getElementById('app');
@@ -86,8 +108,8 @@ function pageMain(A, META) {
     s.render();
   }
   function picture(parent, id, theme, scale, fxIds, tick) {
-    const s = screenBox(parent, 40, 9, scale, theme);
     const def = art[id];
+    const s = screenBox(parent, def.w, def.h, scale, theme);
     const paint = (t) => drawArt(s, def, 0, fxIds, t);
     paint(tick ?? fixedTick);
     if (!frozen && tick === undefined && (fxIds ?? def.fx ?? []).length) animated.push(paint);
@@ -121,6 +143,25 @@ function pageMain(A, META) {
     paint(fixedTick);
     if (!frozen && (art[id].fx ?? []).length) animated.push(paint);
   }
+  // 40x25 screen art with the UI's reserved rows printed over it (TT-021)
+  function screenArt(parent, id, theme, scale, overlay = true, tick) {
+    const def = art[id];
+    const s = screenBox(parent, 40, 25, scale, theme, { x: 16, y: 18 });
+    const ending = META.endings.find((e) => e.art === id);
+    const centre = (y, text, role) => s.print(Math.floor((40 - text.length) / 2), y, text, role, '0');
+    const paint = (t) => {
+      drawArt(s, def, 0, undefined, t);
+      // stand-in for the UI's text: plain palette keys, so it reads on black in every theme
+      if (overlay && id === 'title') centre(24, 'PRESS ANY KEY', 'f');
+      else if (overlay && ending) {
+        centre(20, ending.title.toUpperCase(), '1');
+        centre(22, 'YOU SCORED 100 OF 100 IN 91 TURNS', 'f');
+      }
+      s.render();
+    };
+    paint(tick ?? fixedTick);
+    if (!frozen && tick === undefined && (def.fx ?? []).length) animated.push(paint);
+  }
   function label(parent, text, cls = 'label') { parent.append(el('div', cls, text)); }
   function card(id) {
     const c = el('section', 'card');
@@ -138,7 +179,33 @@ function pageMain(A, META) {
     for (const id of ids) { label(app, `${id} - ${theme} ${scale}x`, 'shot-label'); picture(app, id, theme, scale); }
   } else if (view === 'zoom') {
     const id = q.get('id') || ids[0];
-    for (const theme of ['c64', 'spectrum']) { label(app, `${id} - ${theme} 4x`, 'shot-label'); picture(app, id, theme, 4); }
+    const scale = Number(q.get('scale') || (art[id]?.h === 25 ? 2 : 4));
+    const row = el('div', 'row');
+    app.append(row);
+    for (const theme of ['c64', 'spectrum']) {
+      const cell = el('div');
+      label(cell, `${id} - ${theme} ${scale}x`, 'shot-label');
+      if (art[id]?.h === 25) screenArt(cell, id, theme, scale, q.get('overlay') !== '0');
+      else picture(cell, id, theme, scale);
+      row.append(cell);
+    }
+  } else if (view === 'screenfx') {
+    for (const [id, ticks, what] of META.screenFx) {
+      label(app, `${id} - ${what} - ticks ${ticks.join(', ')}`, 'shot-label');
+      const row = el('div', 'row');
+      app.append(row);
+      for (const t of ticks) screenArt(row, id, 'c64', 1, true, t);
+    }
+  } else if (view === 'screens') {
+    const theme = q.get('theme') || 'c64';
+    const row = el('div', 'row');
+    app.append(row);
+    for (const id of screenIds) {
+      const cell = el('div');
+      label(cell, `${id} - ${theme} ${q.get('scale') || 2}x`, 'shot-label');
+      screenArt(cell, id, theme, Number(q.get('scale') || 2), q.get('overlay') !== '0');
+      row.append(cell);
+    }
   } else if (view === 'situ') {
     const theme = q.get('theme') || 'c64';
     const row = el('div', 'row');
@@ -152,7 +219,7 @@ function pageMain(A, META) {
       for (const t of ticks) picture(row, id, 'c64', 2, [fxId], t);
     }
   } else {
-    app.append(el('h1', null, 'The Tallyman - art style gate (TT-019)'));
+    app.append(el('h1', null, 'The Tallyman - art preview (TT-019, TT-021)'));
     app.append(el('p', 'meta', 'Rendered with the game\'s own screen.js, font8x8 and palettes; fx from src/ui/fx.js at 10 ticks/s. '
       + 'Query: ?static=1&tick=N freezes the animation.'));
     for (const id of ids) {
@@ -162,6 +229,19 @@ function pageMain(A, META) {
         const cell = el('div', 'cell');
         label(cell, `${theme} ${scale}x`);
         picture(cell, id, theme, scale);
+        grid.append(cell);
+      }
+      c.append(grid);
+      app.append(c);
+    }
+    for (const id of screenIds) {
+      const c = card(id);
+      if (META.briefs[id]) c.append(el('p', 'brief', `Brief: ${META.briefs[id]}`));
+      const grid = el('div', 'grid');
+      for (const theme of ['c64', 'spectrum']) {
+        const cell = el('div', 'cell');
+        label(cell, `${theme} 2x, with the UI text in the reserved rows`);
+        screenArt(cell, id, theme, 2);
         grid.append(cell);
       }
       c.append(grid);
@@ -241,7 +321,7 @@ function calmTick() {
   return 0;
 }
 
-function screenshots() {
+function screenshots(set = 'all') {
   const chrome = process.env.CHROME || 'google-chrome';
   const profile = mkdtempSync(join(tmpdir(), 'art-preview-'));
   const tick = String(calmTick());
@@ -252,11 +332,19 @@ function screenshots() {
     ['art-gate-situ-c64.png', { view: 'situ', theme: 'c64', scale: '2' }, [2320, 520]],
     ['art-gate-situ-spectrum.png', { view: 'situ', theme: 'spectrum', scale: '2' }, [2320, 520]],
     ['art-gate-fx.png', { view: 'fx' }, [2760, 820]],
-    ...Object.keys(art).map((id) => [`art-gate-${id}.png`, { view: 'zoom', id }, [1320, 680]]),
+    ...Object.keys(art).filter((id) => art[id].h === 9).map((id) => [`art-gate-${id}.png`, { view: 'zoom', id }, [1320, 680]]),
+  ];
+  const screenIds = Object.keys(art).filter((id) => art[id].h === 25);
+  const screenShots = [
+    ['art-021-screens-c64.png', { view: 'screens', theme: 'c64', scale: '2' }, [2300, 1560]],
+    ['art-021-screens-spectrum.png', { view: 'screens', theme: 'spectrum', scale: '2' }, [2300, 1560]],
+    ['art-021-title-4x.png', { view: 'zoom', id: 'title', scale: '4' }, [3000, 1010]],
+    ['art-021-fx.png', { view: 'screenfx' }, [1160, 1980]],
+    ...screenIds.map((id) => [`art-021-${id}.png`, { view: 'zoom', id, scale: '2' }, [1560, 540]]),
   ];
   mkdirSync(SHOTS, { recursive: true });
   try {
-    for (const [file, params, [w, h]] of shots) {
+    for (const [file, params, [w, h]] of set === 'screens' ? screenShots : [...shots, ...screenShots]) {
       const r = spawnSync(chrome, [
         '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--force-device-scale-factor=1',
         `--user-data-dir=${profile}`, `--window-size=${w},${h}`, '--virtual-time-budget=3000',
@@ -288,7 +376,17 @@ async function main() {
     ['fog', flickerId, [0, 10, 20, 30]],
     ['flicker', flickerId, [calm, dim1, dim2, calm]],
   ];
-  const meta = { rooms, fxFrames };
+  const story = readFileSync(resolve(root, 'docs/STORY.md'), 'utf8');
+  const briefs = parseScreenBriefs(story);
+  const screenFx = [];
+  for (const [id, def] of Object.entries(art)) {
+    if (def.h !== 25) continue;
+    for (const f of def.fx ?? []) {
+      const on = firstActiveTick(def, f, f === 'flicker' ? (o) => o.length > 20 : undefined);
+      screenFx.push([id, f === 'lightning' ? [on - 1, on, on + 2] : [on, on + 7, on + 15], f]);
+    }
+  }
+  const meta = { rooms, fxFrames, briefs, screenFx, endings: endings.map((e) => ({ art: e.art, title: e.title })) };
   const js = (await bundle()).replace(/<\/script/gi, '<\\/script');
   const json = JSON.stringify(meta).replace(/</g, '\\u003c');
   const html = `<!doctype html>
@@ -296,8 +394,8 @@ async function main() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Art Style Gate</title>
-<!-- GENERATED by tools/art-preview.js (TT-019) - do not edit; re-run the tool. -->
+<title>Tallyman Art Preview</title>
+<!-- GENERATED by tools/art-preview.js (TT-019, TT-021) - do not edit; re-run the tool. -->
 <style>${CSS}</style>
 </head>
 <body>
@@ -313,7 +411,8 @@ ${js}
 `;
   writeFileSync(OUT, html);
   console.log(`art-preview: wrote docs/art-preview.html (${Object.keys(art).length} pictures, ${html.length} bytes)`);
-  if (process.argv.includes('--screenshots')) screenshots();
+  const shotArg = process.argv.find((a) => a.startsWith('--screenshots'));
+  if (shotArg) screenshots(shotArg.split('=')[1] || 'all');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

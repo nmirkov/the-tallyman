@@ -2,7 +2,7 @@
 id: TT-021
 title: Art: 40x25 title and ending screens
 milestone: M3
-status: in-progress
+status: done
 agent: artist
 model: opus
 depends: [TT-019]
