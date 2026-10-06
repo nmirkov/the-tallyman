@@ -2,7 +2,7 @@
 id: TT-014
 title: Boot: tape-loading screen, title screen, intro, ending screens
 milestone: M2
-status: in-progress
+status: done
 agent: ui-dev
 model: opus
 depends: [TT-012, TT-013, TT-021]

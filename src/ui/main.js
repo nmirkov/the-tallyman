@@ -1,11 +1,14 @@
 // The browser host (ARCHITECTURE A10): wires the engine to the 40x25 screen, the terminal,
 // the picture panel, the status bar, audio and storage, and renders Output Events through
 // the pure dispatcher (src/ui/dispatch.js). It holds no game state beyond what the last
-// events said (A10.4 rule 5). TT-014 puts the tape-loading and title screens in front.
+// events said (A10.4 rule 5). The boot sequence (src/ui/boot.js, TT-014) runs first:
+// power-on screen, LOAD, tape loading, title; QUIT returns to the title.
 //
 // URL parameters (testing):
 //   seed=<uint32>         game seed (default: from the clock)
-//   script=cmd1|cmd2|...  type these commands once the game is idle, typewriter off
+//   script=cmd1|cmd2|...  type these commands once the game is idle, typewriter off (no boot)
+//   skipboot=1            straight to the title screen (also boot=title; reduced motion does it too)
+//   boot=off              no boot sequence and no title: straight into the game
 //   theme=c64|spectrum|amber   start theme for this page load (not persisted)
 //   static=1              reduced motion: instant text, no blinking, no fx, steady border
 //   storage=off           behave as if localStorage were unavailable (in-memory saves)
@@ -16,6 +19,7 @@ import { createDispatcher, THEME_ORDER } from './dispatch.js';
 import { createStorageAdapter, loadSettings } from './storage.js';
 import { drawStatus, borderForNerve, borderAt } from './statusbar.js';
 import { createArtLayer, drawDivider, PICTURE_TOP, PICTURE_ROWS } from './picture.js';
+import { createBoot, bootStart } from './boot.js';
 import { createGame } from '../engine/game.js';
 import content from '../content/index.js';
 
@@ -60,7 +64,14 @@ const endArt = createArtLayer(screen, { top: 0, reducedMotion });
 // ------------------------------------------------------------------ view state
 
 let game = null;
-let mode = 'play'; // 'play' | 'endWait' (ending text shown, waiting for a key) | 'end' (ending screen)
+// 'boot' (boot.js owns the screen) | 'play' | 'endWait' (ending text shown, waiting for a key)
+// | 'end' (ending screen)
+let mode = 'play';
+let boot = null;
+/** A user gesture has happened (audio can play). */
+let gestured = false;
+/** Swallow the click that follows a boot pointerdown (the terminal would read it as a key). */
+let swallowClick = false;
 let endEvent = null;
 let status = null;
 let pictureEvent = { id: null, graphics: true };
@@ -252,7 +263,7 @@ const dispatcher = createDispatcher({
   download,
   pickFile,
   setInputEnabled: (on) => term.setInputEnabled(on),
-  quit: () => newGame(newSeed()),
+  quit: () => showTitle(),
   applySetting,
 }, { settings });
 
@@ -270,14 +281,78 @@ function newGame(seed) {
   dispatcher.render(game.start());
 }
 
+// ------------------------------------------------------------------ boot and title (TT-014)
+
+let firstSeed = Number.isFinite(seedParam) ? seedParam >>> 0 : null;
+
+/** Leave the boot / title for a fresh game (intro). */
+function startGame() {
+  boot = null;
+  mode = 'play';
+  endEvent = null;
+  endArt.set(null);
+  term.setColors(null);
+  term.setInputEnabled(true);
+  screen.clearRegion();
+  drawStatusBar();
+  const seed = firstSeed ?? newSeed();
+  firstSeed = null;
+  newGame(seed);
+  const notice = adapter.takeNotice();
+  if (notice) term.print(notice, 'system');
+  term.focus();
+}
+
+/**
+ * Run the boot sequence from `start` ('power' or 'title'). The game, if any, is discarded.
+ * @param {'power'|'title'} start
+ */
+function runBoot(start) {
+  mode = 'boot';
+  game = null;
+  status = null;
+  picture.set(null);
+  endArt.set(null);
+  term.setColors(null);
+  term.setInputEnabled(false);
+  audio.ambient('none');
+  boot = createBoot({
+    screen,
+    audio,
+    titleArt: content.art?.title ?? null,
+    start,
+    reducedMotion,
+    gestured,
+    music: () => dispatcher.settings.sound === 'on' && dispatcher.settings.music === 'on' && audio.available,
+    onStart: startGame,
+    now: win.performance.now(),
+  });
+}
+
+/** QUIT: back to the title screen. */
+function showTitle() {
+  term.clear();
+  runBoot('title');
+}
+
 // ------------------------------------------------------------------ input, audio unlock
 
-const unlock = () => audio.unlock();
+const unlock = () => { gestured = true; audio.unlock(); };
 win.addEventListener('keydown', (e) => {
   unlock();
   if (e.key === 'F2') {
     e.preventDefault();
-    dispatcher.setting('sound', 'toggle');
+    const r = dispatcher.setting('sound', 'toggle');
+    if (mode === 'boot') audio.setMuted(r.value === 'off'); // the terminal (and its marks) is paused
+    return;
+  }
+  if (mode === 'boot') {
+    // the boot owns every key; modifiers alone, browser shortcuts and auto-repeat do not count
+    if (e.ctrlKey || e.altKey || e.metaKey || /^F\d+$/.test(e.key)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.repeat || ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
+    boot?.key(win.performance.now());
     return;
   }
   if (mode === 'endWait' && term.ready && !e.ctrlKey && !e.altKey && !e.metaKey) {
@@ -288,21 +363,40 @@ win.addEventListener('keydown', (e) => {
 }, { capture: true });
 win.addEventListener('pointerdown', (e) => {
   unlock();
+  if (mode === 'boot') {
+    e.preventDefault();
+    swallowClick = true;
+    boot?.key(win.performance.now());
+    return;
+  }
   if (mode === 'endWait' && term.ready) {
     e.preventDefault();
     showEnding();
   }
+}, { capture: true });
+win.addEventListener('click', (e) => {
+  if (mode !== 'boot' && !swallowClick) return;
+  swallowClick = false;
+  e.preventDefault();
+  e.stopPropagation();
 }, { capture: true });
 motionQuery?.addEventListener?.('change', (e) => {
   if (forcedStatic) return;
   reducedMotion = e.matches;
   picture.setReducedMotion(reducedMotion);
   endArt.setReducedMotion(reducedMotion);
+  boot?.setReducedMotion(reducedMotion);
 });
 
 // ------------------------------------------------------------------ frame loop
 
 function frame(now) {
+  if (mode === 'boot') {
+    boot?.frame(now);
+    screen.render();
+    win.requestAnimationFrame(frame);
+    return;
+  }
   term.frame(now);
   if (mode === 'play') picture.frame(now);
   else endArt.frame(now);
@@ -343,12 +437,9 @@ async function runScript() {
 
 // ------------------------------------------------------------------ boot
 
-screen.clearRegion();
-drawStatusBar();
-newGame(Number.isFinite(seedParam) ? seedParam >>> 0 : newSeed());
-const notice = adapter.takeNotice();
-if (notice) term.print(notice, 'system');
-term.focus();
+const startAt = bootStart({ boot: params.get('boot'), skipboot: params.get('skipboot'), scripted, reducedMotion });
+if (startAt === 'game') startGame();
+else runBoot(startAt);
 win.requestAnimationFrame(frame);
 if (scripted) runScript();
 
@@ -356,6 +447,10 @@ if (scripted) runScript();
 win.__tallyman = {
   get game() { return game; },
   get mode() { return mode; },
+  /** Boot phase ('power' ... 'title'), or null once the game runs. */
+  get bootPhase() { return boot ? boot.phase : null; },
+  /** Press a key on the boot / title screen (tests). */
+  bootKey: () => { gestured = true; boot?.key(win.performance.now()); },
   get scriptDone() { return scriptDone && term.ready; },
   get settings() { return dispatcher.settings; },
   term,
