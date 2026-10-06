@@ -2,7 +2,7 @@
 id: TT-024
 title: Blind AI playtest and bug fixing
 milestone: M4
-status: todo
+status: in-progress
 agent: qa
 model: opus
 depends: [TT-023]

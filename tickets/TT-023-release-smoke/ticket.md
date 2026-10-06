@@ -2,7 +2,7 @@
 id: TT-023
 title: Release build and browser smoke tests
 milestone: M4
-status: todo
+status: in-progress
 agent: ui-dev
 model: opus
 depends: [TT-014, TT-022]
