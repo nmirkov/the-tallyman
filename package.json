@@ -14,9 +14,11 @@
     "start": "node tools/serve.js",
     "play": "node tools/play.js",
     "progress": "node tools/progress.js",
-    "audio:audit": "node tools/audio-audit.js"
+    "audio:audit": "node tools/audio-audit.js",
+    "smoke": "node tools/smoke.js"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "playwright-core": "1.63.0"
   }
 }
