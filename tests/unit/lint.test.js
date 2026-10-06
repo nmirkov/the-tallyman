@@ -13,10 +13,11 @@ const LINT = fileURLToPath(new URL('../../tools/lint-content.js', import.meta.ur
 const lint = (content, opts = {}) => lintContent(content, { hasGlyph, ...opts });
 const show = (r) => [...r.errors.map((f) => formatFinding('error', f)), ...r.warnings.map((f) => formatFinding('warning', f))].join('\n');
 
-test('the real content bundle lints without errors; strict mode still refuses it (stubs, missing art)', () => {
+test('the real content bundle lints without errors, also in strict mode', () => {
   const r = lint(realContent);
   assert.deepEqual(r.errors, [], show(r));
-  assert.ok(lint(realContent, { strict: true }).errors.length > 0);
+  const strict = lint(realContent, { strict: true });
+  assert.deepEqual(strict.errors, [], show(strict));
 });
 
 test('mini-world lints with zero errors; its only warning is the declared stub', () => {
