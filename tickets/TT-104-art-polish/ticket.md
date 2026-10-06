@@ -2,7 +2,7 @@
 id: TT-104
 title: Polish the weakest pictures
 milestone: BUG
-status: in-progress
+status: done
 agent: artist
 model: opus
 depends: [TT-020, TT-021]
